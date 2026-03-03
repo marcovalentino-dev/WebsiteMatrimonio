@@ -1,0 +1,123 @@
+{
+  "event": {
+    "coupleNames": "Salvatore e Donatella",
+    "dateISO": "2026-09-30T11:35",
+    "timezone": "Europe/Rome",
+    "dressCode": "Eleganti",
+    "notes": "Con immensa gioia vi invitiamo a celebrare il nostro giorno speciale.",
+    "ceremony": {
+      "name": "Chiesa",
+      "address": "Piazza Santa Chiara 4",
+      "city": "Napoli",
+      "time": "15:30"
+    },
+    "reception": {
+      "name": "Hotel San Francesco al Monte",
+      "address": "C.so Vittorio Emanuele, 328, 80135 ",
+      "city": "Napoli",
+      "time": "15:00"
+    }
+  },
+  "theme": {
+    "palette": {
+      "primary": "#ff9470",
+      "secondary": "#d8896e",
+      "background": "#d78f47",
+      "surface": "#fff6d6",
+      "text": "#127ba1"
+    },
+    "fontPairing": {
+      "heading": "prata",
+      "body": "manrope"
+    },
+    "radius": 17,
+    "shadowIntensity": 73,
+    "backgroundStyle": "gradient"
+  },
+  "introLetter": {
+    "enabled": true,
+    "envelopeStyle": "rose",
+    "sealStyle": "S&D",
+    "introText": "Tocca il sigillo per aprire il nostro invito.",
+    "playSound": true,
+    "animationVariant": "smooth"
+  },
+  "sections": {
+    "enabledMap": {
+      "story": false,
+      "details": true,
+      "maps": true,
+      "dressCode": false,
+      "faq": true,
+      "gallery": false,
+      "rsvp": true,
+      "guestbook": false
+    },
+    "order": [
+      "story",
+      "details",
+      "maps",
+      "dressCode",
+      "faq",
+      "gallery",
+      "rsvp",
+      "guestbook"
+    ],
+    "countdownEnabled": true
+  },
+  "rsvp": {
+    "enabled": true,
+    "deadlineISO": "2026-08-20",
+    "fields": {
+      "name": true,
+      "plusOneCount": true,
+      "allergies": true,
+      "message": true
+    },
+    "submitMode": "mailto",
+    "recipientEmail": "wedding@example.com"
+  },
+  "gallery": {
+    "enabled": true,
+    "layout": "masonry",
+    "images": [
+      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1200&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=1200&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=1200&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=1200&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=80&w=1200&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop"
+    ],
+    "allowGuestUploadLink": ""
+  },
+  "seo": {
+    "title": "Salvatore & Donatella - Wedding Day",
+    "description": "Invito ufficiale al matrimonio di Salvatore e Donatella.",
+    "ogImageUrl": "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1200&auto=format&fit=crop"
+  },
+  "privacy": {
+    "showCookieBanner": false,
+    "rsvpDisclaimerText": "I dati inviati saranno usati esclusivamente per organizzare l’evento."
+  },
+  "texts": {
+    "heroSubtitle": "Saremo felici di condividere con voi il nostro giorno più bello.",
+    "storyTitle": "Our Journey",
+    "storyBody": "Da un incontro inaspettato a una promessa eterna, questo è il nostro viaggio.",
+    "detailsTitle": "Dettagli della Giornata",
+    "faqItems": [
+      {
+        "q": "Ci sono parcheggi disponibili?",
+        "a": "Sì, sia in chiesa che in villa sono presenti aree parcheggio."
+      },
+      {
+        "q": "Posso portare bambini?",
+        "a": "Certamente, saranno i benvenuti alla festa."
+      },
+      {
+        "q": "Come confermo la presenza?",
+        "a": "Compila il modulo RSVP entro la data indicata."
+      }
+    ],
+    "footerNote": "Con amore, Salvatore e Donatella"
+  }
+}

@@ -66,7 +66,6 @@ export function IntroGate({
                     ref={videoRef}
                     className="h-full w-full object-contain"
                     autoPlay
-                    muted
                     playsInline
                     preload="auto"
                     controls={false}

@@ -12,7 +12,7 @@ export function PublicSite() {
   }
 
   return (
-    <IntroGate intro={config.introLetter}>
+    <IntroGate intro={config.introLetter} coupleNames={config.event.coupleNames}>
       <WeddingContent config={config} />
     </IntroGate>
   );

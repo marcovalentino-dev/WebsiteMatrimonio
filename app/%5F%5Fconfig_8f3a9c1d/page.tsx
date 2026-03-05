@@ -1,5 +1,6 @@
-﻿import { ConfigDashboard } from '@/components/dashboard/ConfigDashboard';
+﻿import { notFound } from 'next/navigation';
 
 export default function ConfigPage() {
-  return <ConfigDashboard />;
+  notFound();
 }
+

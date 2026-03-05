@@ -6,10 +6,11 @@ import { INTRO_SEEN_KEY } from '@/lib/config/storage';
 import { SiteConfig } from '@/lib/config/types';
 
 const INTRO_VIDEO_PATH = '/intro/intro.mp4';
+const SOUNDTRACK_PATH = '/intro/soundtrack.mp3';
 
 export function IntroGate({
   intro,
-  coupleNames,
+  coupleNames: _coupleNames,
   children
 }: {
   intro: SiteConfig['introLetter'];
@@ -17,6 +18,7 @@ export function IntroGate({
   children: React.ReactNode;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [phase, setPhase] = useState<'checking' | 'active' | 'done'>('checking');
   const [entered, setEntered] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -46,7 +48,7 @@ export function IntroGate({
     if (!node) return;
 
     try {
-      node.muted = false;
+      node.muted = true;
       node.currentTime = 0;
       await node.play();
       setNeedsManualStart(false);
@@ -57,13 +59,30 @@ export function IntroGate({
 
   const handleEnter = async () => {
     setEntered(true);
+    const soundtrack = audioRef.current;
+    if (soundtrack) {
+      soundtrack.volume = 0.55;
+      void soundtrack.play().catch(() => {
+        // Ignore autoplay errors; user can still continue without music.
+      });
+    }
     await startVideoWithAudio();
+  };
+
+  const handleLoadedData = () => {
+    const node = videoRef.current;
+    if (!node || entered) return;
+    node.pause();
+    node.currentTime = 0;
   };
 
   if (phase === 'checking') return null;
 
   return (
     <>
+      <audio ref={audioRef} preload="auto" loop>
+        <source src={SOUNDTRACK_PATH} type="audio/mpeg" />
+      </audio>
       <AnimatePresence>
         {phase === 'active' && (
           <motion.div
@@ -75,56 +94,47 @@ export function IntroGate({
             transition={{ duration: 0.45 }}
           >
             {!hasError ? (
-              <div className="grid h-full w-full place-items-center p-3 sm:p-6">
-                <div className="relative h-full w-full max-h-[96vh] max-w-[96vw] overflow-hidden rounded-lg bg-black">
-                  <video
-                    ref={videoRef}
-                    className="h-full w-full object-contain"
-                    playsInline
-                    preload="auto"
-                    controls={false}
-                    controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-                    disablePictureInPicture
-                    onEnded={finishIntro}
-                    onError={() => setHasError(true)}
+              <div className="relative h-full w-full overflow-hidden bg-black">
+                <video
+                  ref={videoRef}
+                  className="h-full w-full object-contain"
+                  playsInline
+                  preload="auto"
+                  muted
+                  controls={false}
+                  controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+                  disablePictureInPicture
+                  onLoadedData={handleLoadedData}
+                  onEnded={finishIntro}
+                  onError={() => setHasError(true)}
+                >
+                  <source src={INTRO_VIDEO_PATH} type="video/mp4" />
+                </video>
+
+                {!entered && (
+                  <button
+                    type="button"
+                    onClick={() => void handleEnter()}
+                    className="absolute inset-0 z-10 grid place-items-center bg-black/15"
+                    aria-label="Apri invito"
                   >
-                    <source src={INTRO_VIDEO_PATH} type="video/mp4" />
-                  </video>
+                    <span className="rounded-full border border-white/45 bg-black/35 px-5 py-2 text-[11px] uppercase tracking-[0.3em] text-white sm:text-xs">
+                      Tap per aprire
+                    </span>
+                  </button>
+                )}
 
-                  {!entered && (
-                    <div className="absolute inset-0 z-10 overflow-hidden bg-[#120f10]">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(155,91,72,0.2),transparent_40%),radial-gradient(circle_at_80%_18%,rgba(180,145,118,0.18),transparent_45%),linear-gradient(180deg,#110f10_0%,#1b1415_100%)]" />
-                      <div className="relative z-10 grid min-h-full place-items-center px-6">
-                        <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center backdrop-blur-sm">
-                          <p className="text-xs uppercase tracking-[0.35em] text-[#cdafa1]">Welcome</p>
-                          <h1 className="mt-4 text-4xl leading-tight text-[#f6e8df] md:text-5xl">{coupleNames}</h1>
-                          <p className="mx-auto mt-4 max-w-md text-sm text-[#e2ccc0]">
-                            Benvenuti nel nostro invito. Tocca per entrare e iniziare l’esperienza.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => void handleEnter()}
-                            className="mt-8 rounded-2xl border border-[#f3dfd3]/40 bg-[#8f3f3f]/60 px-6 py-3 text-sm font-medium uppercase tracking-[0.2em] text-[#fff4ee] transition hover:bg-[#a14a4a]/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f4ddd0]"
-                          >
-                            Tap to enter
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {entered && needsManualStart && (
-                    <div className="absolute inset-0 grid place-items-center bg-black/45 px-4">
-                      <button
-                        type="button"
-                        onClick={() => void startVideoWithAudio()}
-                        className="rounded-2xl border border-white/40 bg-black/40 px-6 py-3 text-sm uppercase tracking-[0.2em] text-white"
-                      >
-                        Avvia video con audio
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {entered && needsManualStart && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/45 px-4">
+                    <button
+                      type="button"
+                      onClick={() => void startVideoWithAudio()}
+                      className="rounded-2xl border border-white/40 bg-black/40 px-6 py-3 text-sm uppercase tracking-[0.2em] text-white"
+                    >
+                      Avvia video con audio
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grid h-full w-full place-items-center px-6 text-center text-[#f3e6e1]">

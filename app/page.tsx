@@ -187,19 +187,23 @@ export default function HomePage() {
   }, [audioStarted]);
 
   const startIntro = async () => {
-    setAudioStarted(true);
-    const a = audioRef.current;
-    if (a) { a.volume = 0.55; void a.play().catch(() => {}); }
     const v = videoRef.current;
     if (!v) { setPhase('entering'); return; }
     try {
-      v.muted = true; v.currentTime = 0;
+      v.currentTime = 0;
       await v.play();
       setPhase('playing');
     } catch {
       setIntroError(true);
       setPhase('entering');
     }
+  };
+
+  const handleVideoEnded = () => {
+    setAudioStarted(true);
+    const a = audioRef.current;
+    if (a) { a.volume = 0.55; void a.play().catch(() => {}); }
+    setPhase('entering');
   };
 
   const toggleMute = () => {
@@ -603,8 +607,8 @@ export default function HomePage() {
                 <video
                   ref={videoRef}
                   className="h-full w-full object-contain"
-                  playsInline preload="auto" muted
-                  onEnded={() => setPhase('entering')}
+                  playsInline preload="auto"
+                  onEnded={handleVideoEnded}
                   onError={() => { setIntroError(true); setPhase('entering'); }}
                 >
                   <source src={INTRO_VIDEO} type="video/mp4" />

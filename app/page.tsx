@@ -32,7 +32,7 @@ const FONTS: { id: FontKey; label: string; css: string }[] = [
 
 // ─── Wedding content ──────────────────────────────────────────────────────────
 const C = {
-  names:     'Salvatore & Donatella',
+  names:     'Salvatore\n & \n Donatella',
   shortDate: '30.09.2026',
   ceremony: {
     name:        'Chiesa di Santa Lucia Vergine al Monte',
@@ -582,7 +582,7 @@ export default function HomePage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <main className="relative">
+    <main className="relative" style={{ fontFamily: hFont }}>
       <audio ref={audioRef} preload="auto" loop>
         <source src={SOUNDTRACK} type="audio/mpeg" />
       </audio>
@@ -610,15 +610,13 @@ export default function HomePage() {
                   <source src={INTRO_VIDEO} type="video/mp4" />
                 </video>
                 {phase === 'ready' && (
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => void startIntro()}
-                    className="absolute inset-0 grid place-items-center bg-black/20"
-                  >
-                    <span className="rounded-full border border-white/65 bg-black/55 px-7 py-2.5 text-xs font-semibold uppercase tracking-widest text-white">
-                      Tap per aprire
-                    </span>
-                  </button>
+                    onKeyDown={(e) => e.key === 'Enter' && void startIntro()}
+                    className="absolute inset-0 cursor-pointer bg-black/20"
+                  />
                 )}
               </>
             ) : (
@@ -669,7 +667,7 @@ export default function HomePage() {
               transition={{ delay: 0.2, duration: 1.2 }}
             />
             <motion.h1
-              className="text-center text-5xl leading-tight text-white drop-shadow-xl md:text-7xl"
+              className="whitespace-pre-line text-center text-5xl leading-tight text-white drop-shadow-xl md:text-7xl"
               style={{ fontFamily: hFont }}
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -744,7 +742,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          <p className="mt-4 text-xs font-semibold" style={{ color: palette.steel }}>FONT TITOLI</p>
+          <p className="mt-4 text-xs font-semibold" style={{ color: palette.steel }}>FONT</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {FONTS.map(({ id, label, css }) => {
               const on = font === id;

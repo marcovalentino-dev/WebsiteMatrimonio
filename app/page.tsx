@@ -8,13 +8,13 @@ type CompanionType = 'Parente' | 'Bambino';
 type Companion     = { name: string; type: CompanionType };
 type Palette       = { steel: string; navy: string; cream: string; peach: string };
 type FontKey       = 'lucida-handwriting' | 'segoe-script' | 'lucida-calligraphy';
-type Phase         = 'idle' | 'ready' | 'playing' | 'entering' | 'done';
+type Phase         = 'idle' | 'entering' | 'done';
 type View          = 'home' | 'rsvp' | 'info';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const INTRO_VIDEO = '/intro/intro.mp4';
 const SOUNDTRACK  = '/intro/soundtrack.mp3';
-const MUTE_AFTER  = 60_000;
+const MUTE_AFTER  = 20_000;
 const VIEW_IDX: Record<View, number> = { home: 0, rsvp: 1, info: 2 };
 
 const DEFAULT_PALETTE: Palette = {
@@ -116,6 +116,15 @@ function IconCalendar({ size = 44, color = 'currentColor' }: { size?: number; co
   );
 }
 
+function IconPlay({ size = 56, color = 'white' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="30" fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.6)" strokeWidth="2" />
+      <polygon points="26,20 48,32 26,44" fill={color} />
+    </svg>
+  );
+}
+
 function IconSound({ active }: { active: boolean }) {
   return active ? (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -142,19 +151,19 @@ const slideEase = { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number,
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const videoRef  = useRef<HTMLVideoElement | null>(null);
-  const audioRef  = useRef<HTMLAudioElement | null>(null);
-  const muteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioRef     = useRef<HTMLAudioElement | null>(null);
+  const muteTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const popupVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const [phase, setPhase]               = useState<Phase>('idle');
-  const [introError, setIntroError]     = useState(false);
   const [audioStarted, setAudioStarted] = useState(false);
   const [isMuted, setIsMuted]           = useState(false);
   const [view, setView]                 = useState<View>('home');
   const [dir, setDir]                   = useState(1);
   const [palette, setPalette]           = useState<Palette>(DEFAULT_PALETTE);
-  const [font, setFont]                 = useState<FontKey>('lucida-handwriting');
+  const [font, setFont]                 = useState<FontKey>('lucida-calligraphy');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [videoPopupOpen, setVideoPopupOpen] = useState(false);
 
   // RSVP form
   const [firstName, setFirstName] = useState('');
@@ -169,42 +178,30 @@ export default function HomePage() {
     [companions],
   );
 
-  useEffect(() => { setPhase('ready'); }, []);
+  // Start with names animation immediately
+  useEffect(() => { setPhase('entering'); }, []);
 
+  // Transition entering → done after 5s
   useEffect(() => {
     if (phase !== 'entering') return;
     const t = setTimeout(() => setPhase('done'), 5000);
     return () => clearTimeout(t);
   }, [phase]);
 
+  // Attempt audio autoplay when site becomes visible
   useEffect(() => {
-    if (!audioStarted) return;
-    muteTimer.current = setTimeout(() => {
-      const a = audioRef.current;
-      if (a && !a.muted) { a.muted = true; setIsMuted(true); }
-    }, MUTE_AFTER);
-    return () => { if (muteTimer.current) clearTimeout(muteTimer.current); };
-  }, [audioStarted]);
-
-  const startIntro = async () => {
-    const v = videoRef.current;
-    if (!v) { setPhase('entering'); return; }
-    try {
-      v.currentTime = 0;
-      await v.play();
-      setPhase('playing');
-    } catch {
-      setIntroError(true);
-      setPhase('entering');
-    }
-  };
-
-  const handleVideoEnded = () => {
-    setAudioStarted(true);
+    if (phase !== 'done') return;
     const a = audioRef.current;
-    if (a) { a.volume = 0.55; void a.play().catch(() => {}); }
-    setPhase('entering');
-  };
+    if (!a) return;
+    a.volume = 0.35;
+    a.play().then(() => {
+      setAudioStarted(true);
+      muteTimer.current = setTimeout(() => {
+        if (a && !a.muted) { a.muted = true; setIsMuted(true); }
+      }, MUTE_AFTER);
+    }).catch(() => {});
+    return () => { if (muteTimer.current) clearTimeout(muteTimer.current); };
+  }, [phase]);
 
   const toggleMute = () => {
     const a = audioRef.current;
@@ -212,6 +209,18 @@ export default function HomePage() {
     if (muteTimer.current) { clearTimeout(muteTimer.current); muteTimer.current = null; }
     a.muted = !a.muted;
     setIsMuted(a.muted);
+  };
+
+  const openVideoPopup = () => {
+    setVideoPopupOpen(true);
+  };
+
+  const closeVideoPopup = () => {
+    setVideoPopupOpen(false);
+    if (popupVideoRef.current) {
+      popupVideoRef.current.pause();
+      popupVideoRef.current.currentTime = 0;
+    }
   };
 
   const navigate = useCallback((to: View) => {
@@ -246,7 +255,7 @@ export default function HomePage() {
   if (phase === 'idle') return null;
 
   // ─── Derived styles ───────────────────────────────────────────────────────
-  const hFont = FONTS.find((f) => f.id === font)?.css ?? FONTS[0].css;
+  const hFont = FONTS.find((f) => f.id === font)?.css ?? FONTS[2].css;
   const block: CSSProperties = {
     borderColor:     rgba(palette.navy, 0.18),
     backgroundColor: rgba(palette.cream, 0.93),
@@ -267,7 +276,7 @@ export default function HomePage() {
     <button
       type="button"
       onClick={() => navigate('home')}
-      className="mb-6 flex items-center gap-1 text-sm font-semibold transition hover:opacity-70"
+      className="mb-6 flex items-center gap-1 text-base font-semibold transition hover:opacity-70"
       style={{ color: rgba(palette.navy, 0.65) }}
     >
       {label}
@@ -275,13 +284,13 @@ export default function HomePage() {
   );
 
   const sectionTitle = (text: string) => (
-    <h2 className="mb-5 text-center text-3xl md:text-4xl" style={{ color: palette.navy, fontFamily: hFont }}>
+    <h2 className="mb-5 text-center text-4xl md:text-5xl" style={{ color: palette.navy, fontFamily: hFont }}>
       {text}
     </h2>
   );
 
   const wrap = (id: string | undefined, children: React.ReactNode) => (
-    <div id={id} className="mx-auto w-full max-w-3xl rounded-2xl border p-6 md:p-8" style={block}>
+    <div id={id} className="mx-auto w-full max-w-3xl rounded-2xl border p-7 md:p-10" style={block}>
       {children}
     </div>
   );
@@ -292,65 +301,120 @@ export default function HomePage() {
       {/* Names + date */}
       <div className="mb-0">
         <div className="mx-auto mb-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
-        <h1 className="text-5xl leading-tight md:text-7xl" style={{ fontFamily: hFont, color: palette.cream }}>
+        <h1 className="text-6xl leading-tight md:text-8xl" style={{ fontFamily: hFont, color: palette.cream }}>
           {C.names}
         </h1>
-        <p className="mt-3 text-xl" style={{ color: rgba(palette.cream, 0.72) }}>
+        <p className="mt-4 text-2xl" style={{ color: rgba(palette.cream, 0.72) }}>
           {C.shortDate}
         </p>
         <div className="mx-auto mt-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
       </div>
 
       {/* Invitation text */}
-      <p className="mx-auto mt-7 max-w-lg text-base leading-relaxed md:text-lg" style={{ color: rgba(palette.cream, 0.88) }}>
+      <p className="mx-auto mt-8 max-w-lg text-lg leading-relaxed md:text-xl" style={{ color: rgba(palette.cream, 0.88) }}>
         <strong>Mercoledì 30 settembre 2026</strong> scriveremo un nuovo capitolo della nostra storia d'amore
-        e saremmo onorati di avervi al nostro fianco. Consultate le informazioni e fateci sapere se sarete dei nostri.
+        e saremo onorati di avervi al nostro fianco. Consultate le informazioni e fateci sapere se sarete dei nostri.
       </p>
 
+      {/* ── Video section ──────────────────────────────────────────────── */}
+      <div className="mt-10 w-full max-w-2xl">
+        <p className="mb-3 text-base tracking-widest uppercase" style={{ color: rgba(palette.cream, 0.6), letterSpacing: '0.18em' }}>
+          il nostro video
+        </p>
+        {/* Decorative frame */}
+        <div
+          className="relative overflow-hidden cursor-pointer group"
+          style={{
+            borderRadius: '1.5rem',
+            border: `2px solid ${rgba(palette.cream, 0.4)}`,
+            boxShadow: `0 8px 48px ${rgba(palette.navy, 0.5)}, inset 0 0 0 6px ${rgba(palette.cream, 0.08)}`,
+          }}
+          onClick={openVideoPopup}
+          role="button"
+          tabIndex={0}
+          aria-label="Guarda il video"
+          onKeyDown={(e) => e.key === 'Enter' && openVideoPopup()}
+        >
+          {/* Preview video (muted, looping, no controls) */}
+          <video
+            className="w-full h-48 md:h-72 object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            tabIndex={-1}
+          >
+            <source src={INTRO_VIDEO} type="video/mp4" />
+          </video>
+
+          {/* Gradient overlay */}
+          <div
+            className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-80"
+            style={{
+              background: `linear-gradient(to top, ${rgba(palette.navy, 0.85)} 0%, ${rgba(palette.navy, 0.3)} 60%, transparent 100%)`,
+            }}
+          />
+
+          {/* Corner ornaments */}
+          <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: rgba(palette.cream, 0.5) }} />
+          <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: rgba(palette.cream, 0.5) }} />
+          <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: rgba(palette.cream, 0.5) }} />
+          <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: rgba(palette.cream, 0.5) }} />
+
+          {/* Play button */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-transform duration-300 group-hover:scale-105">
+            <IconPlay size={72} color="white" />
+            <span className="text-lg font-semibold text-white drop-shadow-lg" style={{ fontFamily: hFont }}>
+              Guarda il nostro video
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Summary cards */}
-      <div className="mt-8 grid w-full max-w-3xl gap-4 md:grid-cols-3">
-        <div className="flex flex-col items-center rounded-2xl border p-5 text-center" style={block}>
-          <IconChurch size={40} color={palette.steel} />
+      <div className="mt-10 grid w-full max-w-3xl gap-4 md:grid-cols-3">
+        <div className="flex flex-col items-center rounded-2xl border p-6 text-center" style={block}>
+          <IconChurch size={44} color={palette.steel} />
           <p className="mt-3 text-sm font-semibold" style={{ color: palette.steel }}>La Cerimonia</p>
-          <p className="mt-1 text-base font-semibold leading-tight" style={{ color: palette.navy, fontFamily: hFont }}>
+          <p className="mt-1 text-lg font-semibold leading-tight" style={{ color: palette.navy, fontFamily: hFont }}>
             {C.ceremony.name}
           </p>
-          <p className="mt-2 text-sm" style={{ color: rgba(palette.navy, 0.8) }}>
+          <p className="mt-2 text-base" style={{ color: rgba(palette.navy, 0.8) }}>
             Ore <strong>{C.ceremony.time}</strong>
           </p>
           <p className="text-sm" style={{ color: rgba(palette.navy, 0.65) }}>Napoli</p>
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl border p-5 text-center" style={block}>
-          <IconReception size={40} color={palette.steel} />
+        <div className="flex flex-col items-center rounded-2xl border p-6 text-center" style={block}>
+          <IconReception size={44} color={palette.steel} />
           <p className="mt-3 text-sm font-semibold" style={{ color: palette.steel }}>Il Ricevimento</p>
-          <p className="mt-1 text-base font-semibold leading-tight" style={{ color: palette.navy, fontFamily: hFont }}>
+          <p className="mt-1 text-lg font-semibold leading-tight" style={{ color: palette.navy, fontFamily: hFont }}>
             {C.reception.name}
           </p>
-          <p className="mt-2 text-sm" style={{ color: rgba(palette.navy, 0.8) }}>
+          <p className="mt-2 text-base" style={{ color: rgba(palette.navy, 0.8) }}>
             A pochi passi dalla chiesa
           </p>
           <p className="text-sm" style={{ color: rgba(palette.navy, 0.65) }}>Napoli</p>
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl border p-5 text-center" style={block}>
-          <IconCalendar size={40} color={palette.steel} />
+        <div className="flex flex-col items-center rounded-2xl border p-6 text-center" style={block}>
+          <IconCalendar size={44} color={palette.steel} />
           <p className="mt-3 text-sm font-semibold" style={{ color: palette.steel }}>Conferma presenza</p>
-          <p className="mt-2 text-sm leading-relaxed" style={{ color: rgba(palette.navy, 0.8) }}>
+          <p className="mt-2 text-base leading-relaxed" style={{ color: rgba(palette.navy, 0.8) }}>
             Vi chiediamo gentilmente di farci sapere entro il
           </p>
-          <p className="mt-1 text-lg font-bold" style={{ color: palette.navy }}>
+          <p className="mt-1 text-xl font-bold" style={{ color: palette.navy }}>
             {C.deadline}
           </p>
         </div>
       </div>
 
       {/* CTA buttons */}
-      <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+      <div className="mt-10 flex flex-col gap-4 sm:flex-row">
         <button
           type="button"
           onClick={() => navigate('rsvp')}
-          className="rounded-2xl px-8 py-4 text-base font-semibold transition hover:opacity-90"
+          className="rounded-2xl px-9 py-5 text-lg font-semibold transition hover:opacity-90"
           style={{ backgroundColor: palette.navy, color: palette.cream }}
         >
           Conferma la tua presenza
@@ -358,7 +422,7 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => navigate('info')}
-          className="rounded-2xl border px-8 py-4 text-base font-semibold backdrop-blur-sm transition hover:opacity-80"
+          className="rounded-2xl border px-9 py-5 text-lg font-semibold backdrop-blur-sm transition hover:opacity-80"
           style={{ borderColor: rgba(palette.cream, 0.55), color: palette.cream }}
         >
           Maggiori informazioni
@@ -374,7 +438,7 @@ export default function HomePage() {
         {backBtn()}
         {wrap(undefined, <>
           {sectionTitle('Conferma la tua presenza')}
-          <p className="text-center text-base leading-relaxed" style={{ color: rgba(palette.navy, 0.78) }}>
+          <p className="text-center text-lg leading-relaxed" style={{ color: rgba(palette.navy, 0.78) }}>
             Sarà un onore avervi con noi. Vi chiediamo di compilare questo modulo
             entro il <strong>{C.deadline}</strong>.
             <br />
@@ -384,22 +448,22 @@ export default function HomePage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-semibold" htmlFor="fn" style={{ color: palette.navy }}>Nome</label>
-                <input id="fn" className="w-full rounded-xl border px-4 py-3 text-base" style={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                <label className="mb-1 block text-base font-semibold" htmlFor="fn" style={{ color: palette.navy }}>Nome</label>
+                <input id="fn" className="w-full rounded-xl border px-4 py-3 text-lg" style={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold" htmlFor="ln" style={{ color: palette.navy }}>Cognome</label>
-                <input id="ln" className="w-full rounded-xl border px-4 py-3 text-base" style={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                <label className="mb-1 block text-base font-semibold" htmlFor="ln" style={{ color: palette.navy }}>Cognome</label>
+                <input id="ln" className="w-full rounded-xl border px-4 py-3 text-lg" style={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold" htmlFor="al" style={{ color: palette.navy }}>
+              <label className="mb-1 block text-base font-semibold" htmlFor="al" style={{ color: palette.navy }}>
                 Intolleranze o allergie alimentari
               </label>
               <textarea
                 id="al"
-                className="min-h-20 w-full rounded-xl border px-4 py-3 text-base"
+                className="min-h-20 w-full rounded-xl border px-4 py-3 text-lg"
                 style={inp}
                 value={allergies}
                 onChange={(e) => setAllergies(e.target.value)}
@@ -409,20 +473,20 @@ export default function HomePage() {
 
             <div className="rounded-xl border p-4" style={card}>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
+                <h3 className="text-2xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
                   Accompagnatori
                 </h3>
                 <button
                   type="button"
                   onClick={() => setCompanions((p) => [...p, { name: '', type: 'Parente' }])}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="rounded-xl px-5 py-2.5 text-base font-semibold text-white transition hover:opacity-90"
                   style={{ backgroundColor: palette.navy }}
                 >
                   Aggiungi persona
                 </button>
               </div>
               {companions.length === 0 ? (
-                <p className="mt-3 text-sm" style={{ color: rgba(palette.navy, 0.65) }}>
+                <p className="mt-3 text-base" style={{ color: rgba(palette.navy, 0.65) }}>
                   Nessun accompagnatore aggiunto.
                 </p>
               ) : (
@@ -430,14 +494,14 @@ export default function HomePage() {
                   {companions.map((c, i) => (
                     <div key={i} className="grid gap-3 rounded-xl border p-3 md:grid-cols-[1fr_160px_auto]" style={card}>
                       <input
-                        className="w-full rounded-xl border px-3 py-2 text-sm"
+                        className="w-full rounded-xl border px-3 py-2 text-base"
                         style={inp}
                         placeholder="Nome e cognome"
                         value={c.name}
                         onChange={(e) => setCompanions((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                       />
                       <select
-                        className="w-full rounded-xl border px-3 py-2 text-sm"
+                        className="w-full rounded-xl border px-3 py-2 text-base"
                         style={inp}
                         value={c.type}
                         onChange={(e) => setCompanions((p) => p.map((x, j) => j === i ? { ...x, type: e.target.value as CompanionType } : x))}
@@ -447,7 +511,7 @@ export default function HomePage() {
                       </select>
                       <button
                         type="button"
-                        className="rounded-xl border px-3 py-2 text-sm font-semibold transition hover:opacity-70"
+                        className="rounded-xl border px-3 py-2 text-base font-semibold transition hover:opacity-70"
                         style={{ borderColor: rgba(palette.navy, 0.28), color: palette.navy }}
                         onClick={() => setCompanions((p) => p.filter((_, j) => j !== i))}
                       >
@@ -459,21 +523,21 @@ export default function HomePage() {
               )}
             </div>
 
-            <p className="text-sm" style={{ color: palette.navy }}>
+            <p className="text-base" style={{ color: palette.navy }}>
               Totale persone confermate: <strong>{totalGuests}</strong>
             </p>
 
             <button
               type="submit"
               disabled={isSending}
-              className="w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition disabled:cursor-not-allowed hover:opacity-90"
+              className="w-full rounded-xl px-6 py-5 text-lg font-semibold text-white transition disabled:cursor-not-allowed hover:opacity-90"
               style={{ backgroundColor: palette.steel, opacity: isSending ? 0.7 : 1 }}
             >
               {isSending ? 'Invio in corso…' : 'Invia la conferma'}
             </button>
 
             {submitMsg && (
-              <p className="text-center text-base font-semibold" style={{ color: palette.navy }}>{submitMsg}</p>
+              <p className="text-center text-lg font-semibold" style={{ color: palette.navy }}>{submitMsg}</p>
             )}
           </form>
         </>)}
@@ -491,33 +555,33 @@ export default function HomePage() {
         {wrap('programma', <>
           {sectionTitle('Il Programma della Giornata')}
           <div className="space-y-4">
-            <div className="rounded-xl border p-5" style={card}>
-              <p className="text-sm font-semibold" style={{ color: palette.steel }}>La Cerimonia</p>
-              <p className="mt-2 text-xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
+            <div className="rounded-xl border p-6" style={card}>
+              <p className="text-base font-semibold" style={{ color: palette.steel }}>La Cerimonia</p>
+              <p className="mt-2 text-2xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
                 {C.ceremony.name}
               </p>
-              <p className="mt-2 text-base" style={{ color: rgba(palette.navy, 0.85) }}>
+              <p className="mt-2 text-lg" style={{ color: rgba(palette.navy, 0.85) }}>
                 Orario: <strong>ore {C.ceremony.time}</strong>
               </p>
-              <p className="mt-1 text-base font-semibold" style={{ color: rgba(palette.navy, 0.75) }}>
+              <p className="mt-1 text-lg font-semibold" style={{ color: rgba(palette.navy, 0.75) }}>
                 {C.ceremony.fullAddress}
               </p>
             </div>
 
             <div className="mx-auto h-px w-full" style={{ backgroundColor: rgba(palette.navy, 0.08) }} />
 
-            <div className="rounded-xl border p-5" style={card}>
-              <p className="text-sm font-semibold" style={{ color: palette.steel }}>Il Ricevimento</p>
-              <p className="mt-2 text-xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
+            <div className="rounded-xl border p-6" style={card}>
+              <p className="text-base font-semibold" style={{ color: palette.steel }}>Il Ricevimento</p>
+              <p className="mt-2 text-2xl font-semibold" style={{ color: palette.navy, fontFamily: hFont }}>
                 {C.reception.name}
               </p>
-              <p className="mt-2 text-base leading-relaxed" style={{ color: rgba(palette.navy, 0.85) }}>
+              <p className="mt-2 text-lg leading-relaxed" style={{ color: rgba(palette.navy, 0.85) }}>
                 {C.reception.description}
               </p>
-              <p className="mt-2 text-base font-semibold" style={{ color: rgba(palette.navy, 0.75) }}>
+              <p className="mt-2 text-lg font-semibold" style={{ color: rgba(palette.navy, 0.75) }}>
                 {C.reception.fullAddress}
               </p>
-              <p className="mt-3 text-sm" style={{ color: rgba(palette.navy, 0.65) }}>
+              <p className="mt-3 text-base" style={{ color: rgba(palette.navy, 0.65) }}>
                 {C.reception.parkingNote}
               </p>
             </div>
@@ -529,22 +593,22 @@ export default function HomePage() {
           {sectionTitle('Mappe e Indicazioni')}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="mb-2 text-base font-semibold" style={{ color: palette.navy }}>Chiesa</p>
+              <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>Chiesa</p>
               <iframe
                 title="Mappa Chiesa"
                 src={mapUrl(C.ceremony.mapsQ)}
-                className="h-[240px] w-full rounded-xl border"
+                className="h-[260px] w-full rounded-xl border"
                 style={{ borderColor: rgba(palette.navy, 0.16) }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
             </div>
             <div>
-              <p className="mb-2 text-base font-semibold" style={{ color: palette.navy }}>Hotel</p>
+              <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>Hotel</p>
               <iframe
                 title="Mappa Hotel"
                 src={mapUrl(C.reception.mapsQ)}
-                className="h-[240px] w-full rounded-xl border"
+                className="h-[260px] w-full rounded-xl border"
                 style={{ borderColor: rgba(palette.navy, 0.16) }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -556,16 +620,16 @@ export default function HomePage() {
         {/* Domande frequenti */}
         {wrap('faq', <>
           {sectionTitle('Hai delle domande?')}
-          <p className="mb-5 text-center text-base" style={{ color: rgba(palette.navy, 0.68) }}>
+          <p className="mb-5 text-center text-lg" style={{ color: rgba(palette.navy, 0.68) }}>
             Ecco le risposte alle domande più frequenti.
           </p>
           <div className="space-y-3">
             {C.faq.map((item) => (
-              <details key={item.q} className="rounded-xl border p-4" style={card}>
-                <summary className="cursor-pointer text-base font-semibold" style={{ color: palette.navy }}>
+              <details key={item.q} className="rounded-xl border p-5" style={card}>
+                <summary className="cursor-pointer text-lg font-semibold" style={{ color: palette.navy }}>
                   {item.q}
                 </summary>
-                <p className="mt-3 text-base leading-relaxed" style={{ color: rgba(palette.navy, 0.82) }}>
+                <p className="mt-3 text-lg leading-relaxed" style={{ color: rgba(palette.navy, 0.82) }}>
                   {item.a}
                 </p>
               </details>
@@ -575,10 +639,10 @@ export default function HomePage() {
 
         {/* Footer */}
         <div
-          className="rounded-2xl border p-5 text-center"
+          className="rounded-2xl border p-6 text-center"
           style={{ borderColor: rgba(palette.navy, 0.22), backgroundColor: palette.navy, color: palette.cream }}
         >
-          <p className="text-xl" style={{ fontFamily: hFont }}>Con amore, Salvatore & Donatella</p>
+          <p className="text-2xl" style={{ fontFamily: hFont }}>Con amore, Salvatore & Donatella</p>
         </div>
       </div>
     </div>
@@ -590,53 +654,6 @@ export default function HomePage() {
       <audio ref={audioRef} preload="auto" loop>
         <source src={SOUNDTRACK} type="audio/mpeg" />
       </audio>
-
-      {/* ── Intro video overlay ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {(phase === 'ready' || phase === 'playing') && (
-          <motion.div
-            key="intro"
-            className="fixed inset-0 z-[120] bg-black"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            {!introError ? (
-              <>
-                <video
-                  ref={videoRef}
-                  className="h-full w-full object-contain"
-                  playsInline preload="auto"
-                  onEnded={handleVideoEnded}
-                  onError={() => { setIntroError(true); setPhase('entering'); }}
-                >
-                  <source src={INTRO_VIDEO} type="video/mp4" />
-                </video>
-                {phase === 'ready' && (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => void startIntro()}
-                    onKeyDown={(e) => e.key === 'Enter' && void startIntro()}
-                    className="absolute inset-0 cursor-pointer bg-black/20"
-                  />
-                )}
-              </>
-            ) : (
-              <div className="absolute inset-0 grid place-items-center">
-                <button
-                  type="button"
-                  onClick={() => void startIntro()}
-                  className="rounded-xl border border-white/45 bg-black/40 px-6 py-3 text-sm font-semibold text-white"
-                >
-                  Continua al sito
-                </button>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Background video + gradient ─────────────────────────────────── */}
       {(phase === 'entering' || phase === 'done') && (
@@ -671,7 +688,7 @@ export default function HomePage() {
               transition={{ delay: 0.2, duration: 1.2 }}
             />
             <motion.h1
-              className="whitespace-pre-line text-center text-5xl leading-tight text-white drop-shadow-xl md:text-7xl"
+              className="whitespace-pre-line text-center text-6xl leading-tight text-white drop-shadow-xl md:text-8xl"
               style={{ fontFamily: hFont }}
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -680,7 +697,7 @@ export default function HomePage() {
               {C.names}
             </motion.h1>
             <motion.p
-              className="mt-4 text-center text-xl tracking-[0.2em] text-white/70 md:text-2xl"
+              className="mt-4 text-center text-2xl tracking-[0.2em] text-white/70 md:text-3xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.4, duration: 1.3, ease: 'easeOut' }}
@@ -825,6 +842,81 @@ export default function HomePage() {
           </AnimatePresence>
         </motion.div>
       )}
+
+      {/* ── Video popup modal ────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {videoPopupOpen && (
+          <motion.div
+            key="video-popup"
+            className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            onClick={closeVideoPopup}
+          >
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0"
+              style={{ backgroundColor: 'rgba(0,0,0,0.88)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            />
+
+            {/* Video container */}
+            <motion.div
+              className="relative z-10 w-full max-w-4xl"
+              initial={{ scale: 0.88, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.88, opacity: 0, y: 30 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative frame border */}
+              <div
+                className="relative rounded-2xl overflow-hidden"
+                style={{
+                  border: `2px solid ${rgba(palette.cream, 0.35)}`,
+                  boxShadow: `0 32px 80px rgba(0,0,0,0.7), inset 0 0 0 6px ${rgba(palette.cream, 0.05)}`,
+                }}
+              >
+                <video
+                  ref={popupVideoRef}
+                  className="w-full rounded-2xl"
+                  controls
+                  autoPlay
+                  playsInline
+                  onEnded={closeVideoPopup}
+                >
+                  <source src={INTRO_VIDEO} type="video/mp4" />
+                </video>
+              </div>
+
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={closeVideoPopup}
+                aria-label="Chiudi video"
+                className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full border text-white transition hover:bg-white/20"
+                style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderColor: rgba(palette.cream, 0.35) }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <line x1="2" y1="2" x2="14" y2="14" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="14" y1="2" x2="2" y2="14" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </button>
+
+              {/* Caption */}
+              <p className="mt-4 text-center text-lg text-white/60" style={{ fontFamily: hFont }}>
+                Salvatore & Donatella · {C.shortDate}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

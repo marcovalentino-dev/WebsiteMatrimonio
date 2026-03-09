@@ -14,7 +14,7 @@ type View          = 'home' | 'rsvp' | 'info';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const INTRO_VIDEO = '/intro/intro.mp4';
 const SOUNDTRACK  = '/intro/soundtrack.mp3';
-const MUTE_AFTER  = 20_000;
+const MUTE_AFTER  = 60_000;
 const VIEW_IDX: Record<View, number> = { home: 0, rsvp: 1, info: 2 };
 
 const DEFAULT_PALETTE: Palette = {
@@ -188,19 +188,27 @@ export default function HomePage() {
     return () => clearTimeout(t);
   }, [phase]);
 
-  // Attempt audio autoplay when site becomes visible
+  // Start audio as soon as animation begins; fallback to first user interaction
   useEffect(() => {
-    if (phase !== 'done') return;
+    if (phase !== 'entering') return;
     const a = audioRef.current;
     if (!a) return;
     a.volume = 0.35;
-    a.play().then(() => {
-      setAudioStarted(true);
-      muteTimer.current = setTimeout(() => {
-        if (a && !a.muted) { a.muted = true; setIsMuted(true); }
-      }, MUTE_AFTER);
-    }).catch(() => {});
-    return () => { if (muteTimer.current) clearTimeout(muteTimer.current); };
+    const tryPlay = () => {
+      a.play().then(() => {
+        setAudioStarted(true);
+        muteTimer.current = setTimeout(() => {
+          if (a && !a.muted) { a.muted = true; setIsMuted(true); }
+        }, MUTE_AFTER);
+        document.removeEventListener('click', tryPlay);
+      }).catch(() => {});
+    };
+    tryPlay();
+    document.addEventListener('click', tryPlay, { once: true });
+    return () => {
+      document.removeEventListener('click', tryPlay);
+      if (muteTimer.current) clearTimeout(muteTimer.current);
+    };
   }, [phase]);
 
   const toggleMute = () => {
@@ -213,6 +221,8 @@ export default function HomePage() {
 
   const openVideoPopup = () => {
     setVideoPopupOpen(true);
+    const a = audioRef.current;
+    if (a && !a.paused) a.pause();
   };
 
   const closeVideoPopup = () => {
@@ -221,6 +231,8 @@ export default function HomePage() {
       popupVideoRef.current.pause();
       popupVideoRef.current.currentTime = 0;
     }
+    const a = audioRef.current;
+    if (a && audioStarted) void a.play().catch(() => {});
   };
 
   const navigate = useCallback((to: View) => {
@@ -301,7 +313,7 @@ export default function HomePage() {
       {/* Names + date */}
       <div className="mb-0">
         <div className="mx-auto mb-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
-        <h1 className="text-6xl leading-tight md:text-8xl" style={{ fontFamily: hFont, color: palette.cream }}>
+        <h1 className="whitespace-pre-line text-6xl leading-tight md:text-8xl" style={{ fontFamily: hFont, color: palette.cream }}>
           {C.names}
         </h1>
         <p className="mt-4 text-2xl" style={{ color: rgba(palette.cream, 0.72) }}>
@@ -791,7 +803,7 @@ export default function HomePage() {
       {/* ── Carousel ────────────────────────────────────────────────────── */}
       {(phase === 'entering' || phase === 'done') && (
         <motion.div
-          className="fixed inset-0 z-10 overflow-hidden"
+          className={`fixed inset-0 z-10 overflow-hidden${phase === 'entering' ? ' pointer-events-none select-none' : ''}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: phase === 'done' ? 1 : 0 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
@@ -911,7 +923,7 @@ export default function HomePage() {
 
               {/* Caption */}
               <p className="mt-4 text-center text-lg text-white/60" style={{ fontFamily: hFont }}>
-                Salvatore & Donatella · {C.shortDate}
+                Salvatore \n & \n Donatella · {C.shortDate}
               </p>
             </motion.div>
           </motion.div>

@@ -64,7 +64,6 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
 
-  const formattedDate = eventDate.toLocaleDateString('it-IT', { dateStyle: 'full' });
   const shortDate = (() => {
     const dd = String(eventDate.getDate()).padStart(2, '0');
     const mm = String(eventDate.getMonth() + 1).padStart(2, '0');
@@ -288,9 +287,8 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
 
       <header className="relative mx-auto max-w-5xl px-4 pb-14 pt-16 md:pt-20">
         <div className="frost-card overflow-hidden rounded-[var(--radius)] border border-white/50 p-8 shadow-glass md:p-12">
-          <p className="mb-3 text-xs uppercase tracking-[0.35em] text-[color:var(--color-secondary)]">{shortDate}</p>
           <h1 className="text-4xl leading-tight md:text-6xl">{config.event.coupleNames}</h1>
-          <p className="mt-2 text-base capitalize text-[color:var(--color-text)]/70 md:text-lg">{formattedDate}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.35em] text-[color:var(--color-secondary)]">{shortDate}</p>
           <p className="mt-4 max-w-xl whitespace-pre-line text-[color:var(--color-text)]/75">{config.texts.heroSubtitle}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             {config.rsvp.enabled && (

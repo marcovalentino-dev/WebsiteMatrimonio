@@ -101,14 +101,29 @@ export function ConfigDashboard() {
                   </Field>
                 ))}
                 <Field label="Heading Font">
-                  <select className={inputBase} value={config.theme.fontPairing.heading} onChange={(e) => setConfig((p) => ({ ...p, theme: { ...p.theme, fontPairing: { ...p.theme.fontPairing, heading: e.target.value as 'playfair' | 'cormorant' | 'prata' | 'lucida-handwriting' | 'segoe-script' | 'lucida-calligraphy' } } }))}>
-                    <option value="playfair">Playfair Display</option>
-                    <option value="cormorant">Cormorant Garamond</option>
-                    <option value="prata">Prata</option>
-                    <option value="lucida-handwriting">Lucida Handwriting</option>
-                    <option value="segoe-script">Segoe Script</option>
-                    <option value="lucida-calligraphy">Lucida Calligraphy</option>
-                  </select>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'lucida-handwriting', label: 'Lucida Handwriting', style: '"Lucida Handwriting", cursive' },
+                      { value: 'segoe-script',       label: 'Segoe Script',       style: '"Segoe Script", cursive' },
+                      { value: 'lucida-calligraphy', label: 'Lucida Calligraphy', style: '"Lucida Calligraphy", cursive' },
+                      { value: 'playfair',           label: 'Playfair Display',   style: 'var(--font-playfair)' },
+                      { value: 'cormorant',          label: 'Cormorant Garamond', style: 'var(--font-cormorant)' },
+                      { value: 'prata',              label: 'Prata',              style: 'var(--font-prata)' },
+                    ] as const).map(({ value, label, style }) => {
+                      const active = config.theme.fontPairing.heading === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setConfig((p) => ({ ...p, theme: { ...p.theme, fontPairing: { ...p.theme.fontPairing, heading: value } } }))}
+                          className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-center transition-all ${active ? 'border-[#2f2622] bg-[#2f2622] text-white' : 'border-black/10 bg-white/70 hover:border-black/25'}`}
+                        >
+                          <span style={{ fontFamily: style }} className="block text-2xl leading-none">Aa</span>
+                          <span className="mt-1 block text-[9px] leading-tight opacity-80">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </Field>
                 <Field label="Body Font">
                   <select className={inputBase} value={config.theme.fontPairing.body} onChange={(e) => setConfig((p) => ({ ...p, theme: { ...p.theme, fontPairing: { ...p.theme.fontPairing, body: e.target.value as 'manrope' | 'nunito' | 'montserrat' } } }))}>

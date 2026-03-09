@@ -235,8 +235,35 @@ export function IntroGate({
         )}
       </AnimatePresence>
 
-      {/* Content (entering + done phases) */}
-      {(phase === 'entering' || phase === 'done') ? children : null}
+      {/* Background video layer — visible during entering phase, fades out when done */}
+      <AnimatePresence>
+        {phase === 'entering' && (
+          <motion.div
+            key="intro-bg-video"
+            className="fixed inset-0 -z-10 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5 }}
+          >
+            <video autoPlay muted loop playsInline className="h-full w-full object-cover">
+              <source src="/background.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-black/25" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Content (entering + done phases) — fades in only when done */}
+      {(phase === 'entering' || phase === 'done') ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === 'done' ? 1 : 0 }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+        >
+          {children}
+        </motion.div>
+      ) : null}
 
       {/* Names reveal overlay — shown during entering phase */}
       <AnimatePresence>

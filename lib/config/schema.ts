@@ -31,7 +31,7 @@ export const SiteConfigSchema = z.object({
       text: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
     }),
     fontPairing: z.object({
-      heading: z.enum(['playfair', 'cormorant', 'prata']),
+      heading: z.enum(['playfair', 'cormorant', 'prata', 'lucida-handwriting', 'segoe-script', 'lucida-calligraphy']),
       body: z.enum(['manrope', 'nunito', 'montserrat'])
     }),
     radius: z.number().min(4).max(32),
@@ -92,6 +92,8 @@ export const SiteConfigSchema = z.object({
     storyTitle: z.string().min(1),
     storyBody: z.string().min(1),
     detailsTitle: z.string().min(1),
+    receptionDescription: z.string(),
+    receptionParkingNote: z.string(),
     faqItems: z.array(z.object({ q: z.string().min(1), a: z.string().min(1) })).min(1),
     footerNote: z.string().min(1)
   })

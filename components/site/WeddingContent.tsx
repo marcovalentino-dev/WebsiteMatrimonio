@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
@@ -26,6 +26,25 @@ function SectionWrap({ title, children, id }: { title: string; children: React.R
   );
 }
 
+function resolveHeadingFont(key: SiteConfig['theme']['fontPairing']['heading']): string {
+  switch (key) {
+    case 'lucida-handwriting': return '"Lucida Handwriting", cursive';
+    case 'segoe-script':       return '"Segoe Script", cursive';
+    case 'lucida-calligraphy': return '"Lucida Calligraphy", cursive';
+    case 'playfair':           return 'var(--font-playfair)';
+    case 'cormorant':          return 'var(--font-cormorant)';
+    default:                   return 'var(--font-prata)';
+  }
+}
+
+function resolveBodyFont(key: SiteConfig['theme']['fontPairing']['body']): string {
+  switch (key) {
+    case 'nunito':     return 'var(--font-nunito)';
+    case 'montserrat': return 'var(--font-montserrat)';
+    default:           return 'var(--font-manrope)';
+  }
+}
+
 export function WeddingContent({ config, preview = false }: { config: SiteConfig; preview?: boolean }) {
   const [guestbookName, setGuestbookName] = useState('');
   const [guestbookText, setGuestbookText] = useState('');
@@ -45,6 +64,14 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
 
+  const formattedDate = eventDate.toLocaleDateString('it-IT', { dateStyle: 'full' });
+  const shortDate = (() => {
+    const dd = String(eventDate.getDate()).padStart(2, '0');
+    const mm = String(eventDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = eventDate.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  })();
+
   const style = {
     '--color-primary': config.theme.palette.primary,
     '--color-secondary': config.theme.palette.secondary,
@@ -52,18 +79,8 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
     '--color-surface': config.theme.palette.surface,
     '--color-text': config.theme.palette.text,
     '--radius': `${config.theme.radius}px`,
-    '--font-heading':
-      config.theme.fontPairing.heading === 'playfair'
-        ? 'var(--font-playfair)'
-        : config.theme.fontPairing.heading === 'cormorant'
-          ? 'var(--font-cormorant)'
-          : 'var(--font-prata)',
-    '--font-body':
-      config.theme.fontPairing.body === 'manrope'
-        ? 'var(--font-manrope)'
-        : config.theme.fontPairing.body === 'nunito'
-          ? 'var(--font-nunito)'
-          : 'var(--font-montserrat)',
+    '--font-heading': resolveHeadingFont(config.theme.fontPairing.heading),
+    '--font-body': resolveBodyFont(config.theme.fontPairing.body),
     boxShadow: `0 20px 60px rgba(0,0,0,${config.theme.shadowIntensity / 250})`
   } as React.CSSProperties;
 
@@ -78,18 +95,36 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
     ),
     details: (
       <SectionWrap title={config.texts.detailsTitle} id="details">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-[var(--radius)] border border-black/10 bg-[color:var(--color-surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-[color:var(--color-secondary)]">Cerimonia</p>
+        <div className="space-y-5">
+          {/* La Cerimonia */}
+          <div className="rounded-[var(--radius)] border border-black/10 bg-[color:var(--color-surface)] p-5">
+            <p className="text-xs uppercase tracking-[0.25em] text-[color:var(--color-secondary)]">La Cerimonia</p>
             <p className="mt-2 text-2xl">{config.event.ceremony.name}</p>
-            <p>{config.event.ceremony.address}, {config.event.ceremony.city}</p>
-            <p className="font-medium">Ore {config.event.ceremony.time}</p>
+            <p className="mt-2 text-sm font-medium">Orario: {config.event.ceremony.time}</p>
+            <p className="text-sm text-[color:var(--color-text)]/75">
+              Location: {config.event.ceremony.address}, {config.event.ceremony.city}
+            </p>
           </div>
-          <div className="rounded-[var(--radius)] border border-black/10 bg-[color:var(--color-surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-[color:var(--color-secondary)]">Ricevimento</p>
+
+          <div className="mx-auto h-px w-full border-t border-black/10" />
+
+          {/* Il Ricevimento */}
+          <div className="rounded-[var(--radius)] border border-black/10 bg-[color:var(--color-surface)] p-5">
+            <p className="text-xs uppercase tracking-[0.25em] text-[color:var(--color-secondary)]">Il Ricevimento</p>
             <p className="mt-2 text-2xl">{config.event.reception.name}</p>
-            <p>{config.event.reception.address}, {config.event.reception.city}</p>
-            <p className="font-medium">Ore {config.event.reception.time}</p>
+            {config.texts.receptionDescription ? (
+              <p className="mt-2 text-sm leading-relaxed text-[color:var(--color-text)]/80">
+                {config.texts.receptionDescription}
+              </p>
+            ) : null}
+            <p className="mt-2 text-sm text-[color:var(--color-text)]/75">
+              Location: {config.event.reception.address}, {config.event.reception.city}
+            </p>
+            {config.texts.receptionParkingNote ? (
+              <p className="mt-3 text-sm italic text-[color:var(--color-text)]/65">
+                {config.texts.receptionParkingNote}
+              </p>
+            ) : null}
           </div>
         </div>
       </SectionWrap>
@@ -187,8 +222,13 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
             {config.rsvp.fields.plusOneCount && <input className="w-full rounded-[var(--radius)] border border-black/15 bg-white/70 p-3" type="number" min={0} placeholder="Numero accompagnatori" value={rsvpState.plusOneCount} onChange={(e) => setRsvpState((s) => ({ ...s, plusOneCount: e.target.value }))} />}
             {config.rsvp.fields.allergies && <input className="w-full rounded-[var(--radius)] border border-black/15 bg-white/70 p-3" placeholder="Allergie o intolleranze" value={rsvpState.allergies} onChange={(e) => setRsvpState((s) => ({ ...s, allergies: e.target.value }))} />}
             {config.rsvp.fields.message && <textarea className="w-full rounded-[var(--radius)] border border-black/15 bg-white/70 p-3" placeholder="Messaggio" rows={4} value={rsvpState.message} onChange={(e) => setRsvpState((s) => ({ ...s, message: e.target.value }))} />}
-            <p className="text-xs text-[color:var(--color-text)]/70">Scadenza conferma: {config.rsvp.deadlineISO}</p>
-            <p className="text-xs text-[color:var(--color-text)]/70">{config.privacy.rsvpDisclaimerText}</p>
+            <p className="text-sm font-medium text-[color:var(--color-text)]/80">
+              Entro quando confermare la presenza?
+            </p>
+            <p className="text-sm text-[color:var(--color-text)]/70">
+              Ti chiediamo di compilare il modulo RSVP entro il {new Date(config.rsvp.deadlineISO).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}.
+            </p>
+            <p className="text-xs text-[color:var(--color-text)]/60">{config.privacy.rsvpDisclaimerText}</p>
             <button className="rounded-[var(--radius)] bg-[color:var(--color-primary)] px-5 py-3 text-white" type="submit">
               Invia RSVP
             </button>
@@ -227,15 +267,31 @@ export function WeddingContent({ config, preview = false }: { config: SiteConfig
 
   return (
     <main
-      className={`min-h-screen text-[color:var(--color-text)] ${config.theme.backgroundStyle === 'gradient' ? 'bg-style-gradient' : config.theme.backgroundStyle === 'soft-noise' ? 'bg-style-soft-noise' : 'bg-style-minimal'}`}
+      className={`relative min-h-screen text-[color:var(--color-text)] ${config.theme.backgroundStyle === 'gradient' ? 'bg-style-gradient' : config.theme.backgroundStyle === 'soft-noise' ? 'bg-style-soft-noise' : 'bg-style-minimal'}`}
       style={style}
     >
+      {/* Background video (only on public site, not preview) */}
+      {!preview && (
+        <div className="fixed inset-0 -z-10 overflow-hidden">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover"
+          >
+            <source src="/background.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-black/25" />
+        </div>
+      )}
+
       <header className="relative mx-auto max-w-5xl px-4 pb-14 pt-16 md:pt-20">
         <div className="frost-card overflow-hidden rounded-[var(--radius)] border border-white/50 p-8 shadow-glass md:p-12">
-          <p className="mb-3 text-xs uppercase tracking-[0.35em] text-[color:var(--color-secondary)]">Wedding Day</p>
+          <p className="mb-3 text-xs uppercase tracking-[0.35em] text-[color:var(--color-secondary)]">{shortDate}</p>
           <h1 className="text-4xl leading-tight md:text-6xl">{config.event.coupleNames}</h1>
-          <p className="mt-3 text-base md:text-lg">{new Date(config.event.dateISO).toLocaleDateString('it-IT', { dateStyle: 'full' })}</p>
-          <p className="mt-4 max-w-xl text-[color:var(--color-text)]/75">{config.texts.heroSubtitle}</p>
+          <p className="mt-2 text-base capitalize text-[color:var(--color-text)]/70 md:text-lg">{formattedDate}</p>
+          <p className="mt-4 max-w-xl whitespace-pre-line text-[color:var(--color-text)]/75">{config.texts.heroSubtitle}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             {config.rsvp.enabled && (
               <a href="#rsvp" className="rounded-[var(--radius)] bg-[color:var(--color-primary)] px-5 py-3 text-sm font-medium text-white">RSVP</a>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
@@ -7,22 +7,37 @@ import { SiteConfig } from '@/lib/config/types';
 
 const INTRO_VIDEO_PATH = '/intro/intro.mp4';
 const SOUNDTRACK_PATH = '/intro/soundtrack.mp3';
+const AUDIO_MUTE_AFTER_MS = 60_000;
+
+function formatDate(dateISO: string) {
+  const d = new Date(dateISO);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
 
 export function IntroGate({
   intro,
-  coupleNames: _coupleNames,
+  coupleNames,
+  dateISO,
   children
 }: {
   intro: SiteConfig['introLetter'];
   coupleNames: string;
+  dateISO: string;
   children: React.ReactNode;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [phase, setPhase] = useState<'checking' | 'active' | 'done'>('checking');
+  const muteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enteringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [phase, setPhase] = useState<'checking' | 'active' | 'entering' | 'done'>('checking');
   const [entered, setEntered] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [needsManualStart, setNeedsManualStart] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
     if (!intro.enabled) {
@@ -38,15 +53,41 @@ export function IntroGate({
     }
   }, [intro.enabled]);
 
+  // Auto-transition from entering → done after animation completes
+  useEffect(() => {
+    if (phase !== 'entering') return;
+    enteringTimerRef.current = setTimeout(() => {
+      setPhase('done');
+      window.sessionStorage.setItem(INTRO_SEEN_KEY, '1');
+    }, 5000);
+    return () => {
+      if (enteringTimerRef.current) clearTimeout(enteringTimerRef.current);
+    };
+  }, [phase]);
+
+  // 60-second auto-mute
+  useEffect(() => {
+    if (!entered) return;
+    muteTimerRef.current = setTimeout(() => {
+      const audio = audioRef.current;
+      if (audio && !audio.muted) {
+        audio.muted = true;
+        setIsMuted(true);
+      }
+    }, AUDIO_MUTE_AFTER_MS);
+    return () => {
+      if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
+    };
+  }, [entered]);
+
   const finishIntro = () => {
-    window.sessionStorage.setItem(INTRO_SEEN_KEY, '1');
-    setPhase('done');
+    // Transition to entering phase (names animation while content loads behind)
+    setPhase('entering');
   };
 
   const startVideoWithAudio = async () => {
     const node = videoRef.current;
     if (!node) return;
-
     try {
       node.muted = true;
       node.currentTime = 0;
@@ -62,9 +103,7 @@ export function IntroGate({
     const soundtrack = audioRef.current;
     if (soundtrack) {
       soundtrack.volume = 0.55;
-      void soundtrack.play().catch(() => {
-        // Ignore autoplay errors; user can still continue without music.
-      });
+      void soundtrack.play().catch(() => {});
     }
     await startVideoWithAudio();
   };
@@ -76,6 +115,18 @@ export function IntroGate({
     node.currentTime = 0;
   };
 
+  const toggleMute = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    // Cancel auto-mute timer if user manually toggles
+    if (muteTimerRef.current) {
+      clearTimeout(muteTimerRef.current);
+      muteTimerRef.current = null;
+    }
+    audio.muted = !audio.muted;
+    setIsMuted(audio.muted);
+  };
+
   if (phase === 'checking') return null;
 
   return (
@@ -83,6 +134,31 @@ export function IntroGate({
       <audio ref={audioRef} preload="auto" loop>
         <source src={SOUNDTRACK_PATH} type="audio/mpeg" />
       </audio>
+
+      {/* Mute toggle — visible after intro video ends */}
+      {(phase === 'entering' || phase === 'done') && entered && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label={isMuted ? 'Attiva audio' : 'Silenzia audio'}
+          className="fixed right-4 top-4 z-[70] flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/30 text-white backdrop-blur-sm transition-opacity hover:bg-black/50"
+        >
+          {isMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          )}
+        </button>
+      )}
+
       <AnimatePresence>
         {phase === 'active' && (
           <motion.div
@@ -158,7 +234,60 @@ export function IntroGate({
           </motion.div>
         )}
       </AnimatePresence>
-      {phase === 'done' ? children : null}
+
+      {/* Content (entering + done phases) */}
+      {(phase === 'entering' || phase === 'done') ? children : null}
+
+      {/* Names reveal overlay — shown during entering phase */}
+      <AnimatePresence>
+        {phase === 'entering' && (
+          <motion.div
+            key="names-overlay"
+            className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/55 px-6"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.8, ease: 'easeInOut' }}
+          >
+            {/* Decorative line top */}
+            <motion.div
+              className="mb-6 h-px w-24 bg-white/40"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 1.2 }}
+            />
+
+            {/* Couple names */}
+            <motion.h1
+              className="text-center font-[var(--font-heading)] text-5xl leading-tight tracking-wide text-white drop-shadow-lg md:text-7xl"
+              style={{ fontFamily: 'var(--font-heading), serif' }}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 1.6, ease: 'easeOut' }}
+            >
+              {coupleNames}
+            </motion.h1>
+
+            {/* Date */}
+            <motion.p
+              className="mt-5 text-center text-xl tracking-[0.25em] text-white/75 md:text-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.4, duration: 1.4, ease: 'easeOut' }}
+            >
+              {formatDate(dateISO)}
+            </motion.p>
+
+            {/* Decorative line bottom */}
+            <motion.div
+              className="mt-6 h-px w-24 bg-white/40"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ delay: 2.2, duration: 1.2 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

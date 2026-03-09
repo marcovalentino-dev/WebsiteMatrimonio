@@ -1,21 +1,21 @@
 {
   "event": {
-    "coupleNames": "Salvatore e Donatella",
-    "dateISO": "2026-09-30T11:35",
+    "coupleNames": "Salvatore & Donatella",
+    "dateISO": "2026-09-30T11:15",
     "timezone": "Europe/Rome",
     "dressCode": "Eleganti",
     "notes": "Con immensa gioia vi invitiamo a celebrare il nostro giorno speciale.",
     "ceremony": {
-      "name": "Chiesa",
-      "address": "Piazza Santa Chiara 4",
-      "city": "Napoli",
-      "time": "15:30"
+      "name": "Chiesa di Santa Lucia Vergine al Monte",
+      "address": "Corso Vittorio Emanuele, 328",
+      "city": "80135 Napoli NA",
+      "time": "11.15"
     },
     "reception": {
       "name": "Hotel San Francesco al Monte",
-      "address": "C.so Vittorio Emanuele, 328, 80135 ",
-      "city": "Napoli",
-      "time": "15:00"
+      "address": "Corso Vittorio Emanuele, 328",
+      "city": "80135 Napoli NA",
+      "time": "13.00"
     }
   },
   "theme": {
@@ -67,7 +67,7 @@
   },
   "rsvp": {
     "enabled": true,
-    "deadlineISO": "2026-08-20",
+    "deadlineISO": "2026-08-01",
     "fields": {
       "name": true,
       "plusOneCount": true,
@@ -97,27 +97,29 @@
   },
   "privacy": {
     "showCookieBanner": false,
-    "rsvpDisclaimerText": "I dati inviati saranno usati esclusivamente per organizzare l’evento."
+    "rsvpDisclaimerText": "I dati inviati saranno usati esclusivamente per organizzare l'evento."
   },
   "texts": {
-    "heroSubtitle": "Saremo felici di condividere con voi il nostro giorno più bello.",
+    "heroSubtitle": "Mercoledì 30 Settembre 2026 scriveremo un nuovo capitolo della nostra storia d'amore e saremmo onorati di avervi al nostro fianco.\nAbbiamo creato questa pagina per guidarvi tra i luoghi e i momenti del nostro \"Sì\".\nConsultate le informazioni e fateci sapere se sarete dei nostri.",
     "storyTitle": "Our Journey",
     "storyBody": "Da un incontro inaspettato a una promessa eterna, questo è il nostro viaggio.",
-    "detailsTitle": "Dettagli della Giornata",
+    "detailsTitle": "Il Programma della Giornata",
+    "receptionDescription": "Dopo la celebrazione, il ricevimento si terrà a pochi passi dalla Chiesa, presso l'Hotel San Francesco al Monte, un antico monastero affacciato sul Golfo.",
+    "receptionParkingNote": "Data la bellezza e la particolarità del Corso Vittorio Emanuele, vi consigliamo di arrivare con un leggero anticipo per godervi il panorama e facilitare il parcheggio.",
     "faqItems": [
       {
+        "q": "Entro quando confermare la presenza?",
+        "a": "Ti chiediamo di compilare il modulo RSVP entro il 1 Agosto 2026."
+      },
+      {
         "q": "Ci sono parcheggi disponibili?",
-        "a": "Sì, sia in chiesa che in villa sono presenti aree parcheggio."
+        "a": "Vi consigliamo di arrivare con un leggero anticipo per facilitare il parcheggio lungo il Corso Vittorio Emanuele."
       },
       {
         "q": "Posso portare bambini?",
         "a": "Certamente, saranno i benvenuti alla festa."
-      },
-      {
-        "q": "Come confermo la presenza?",
-        "a": "Compila il modulo RSVP entro la data indicata."
       }
     ],
-    "footerNote": "Con amore, Salvatore e Donatella"
+    "footerNote": "Con amore, Salvatore & Donatella"
   }
 }

@@ -101,10 +101,13 @@ export function ConfigDashboard() {
                   </Field>
                 ))}
                 <Field label="Heading Font">
-                  <select className={inputBase} value={config.theme.fontPairing.heading} onChange={(e) => setConfig((p) => ({ ...p, theme: { ...p.theme, fontPairing: { ...p.theme.fontPairing, heading: e.target.value as 'playfair' | 'cormorant' | 'prata' } } }))}>
+                  <select className={inputBase} value={config.theme.fontPairing.heading} onChange={(e) => setConfig((p) => ({ ...p, theme: { ...p.theme, fontPairing: { ...p.theme.fontPairing, heading: e.target.value as 'playfair' | 'cormorant' | 'prata' | 'lucida-handwriting' | 'segoe-script' | 'lucida-calligraphy' } } }))}>
                     <option value="playfair">Playfair Display</option>
                     <option value="cormorant">Cormorant Garamond</option>
                     <option value="prata">Prata</option>
+                    <option value="lucida-handwriting">Lucida Handwriting</option>
+                    <option value="segoe-script">Segoe Script</option>
+                    <option value="lucida-calligraphy">Lucida Calligraphy</option>
                   </select>
                 </Field>
                 <Field label="Body Font">
@@ -193,6 +196,8 @@ export function ConfigDashboard() {
                 <Field label="Story title"><input className={inputBase} value={config.texts.storyTitle} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, storyTitle: e.target.value } }))} /></Field>
                 <Field label="Story body"><textarea className={inputBase} rows={3} value={config.texts.storyBody} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, storyBody: e.target.value } }))} /></Field>
                 <Field label="Details title"><input className={inputBase} value={config.texts.detailsTitle} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, detailsTitle: e.target.value } }))} /></Field>
+                <Field label="Descrizione ricevimento"><textarea className={inputBase} rows={3} value={config.texts.receptionDescription} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, receptionDescription: e.target.value } }))} /></Field>
+                <Field label="Nota parcheggio ricevimento"><textarea className={inputBase} rows={2} value={config.texts.receptionParkingNote} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, receptionParkingNote: e.target.value } }))} /></Field>
                 <Field label="Footer note"><input className={inputBase} value={config.texts.footerNote} onChange={(e) => setConfig((p) => ({ ...p, texts: { ...p.texts, footerNote: e.target.value } }))} /></Field>
                 <div className="space-y-3">
                   {config.texts.faqItems.map((faq, idx) => (

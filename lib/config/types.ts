@@ -27,7 +27,7 @@ export interface SiteConfig {
       text: string;
     };
     fontPairing: {
-      heading: 'playfair' | 'cormorant' | 'prata';
+      heading: 'playfair' | 'cormorant' | 'prata' | 'lucida-handwriting' | 'segoe-script' | 'lucida-calligraphy';
       body: 'manrope' | 'nunito' | 'montserrat';
     };
     radius: number;
@@ -79,6 +79,8 @@ export interface SiteConfig {
     storyTitle: string;
     storyBody: string;
     detailsTitle: string;
+    receptionDescription: string;
+    receptionParkingNote: string;
     faqItems: Array<{ q: string; a: string }>;
     footerNote: string;
   };

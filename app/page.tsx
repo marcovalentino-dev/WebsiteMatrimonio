@@ -1,199 +1,175 @@
-﻿'use client';
+'use client';
 
-import { CSSProperties, FormEvent, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 type CompanionType = 'Parente' | 'Bambino';
+type Companion = { name: string; type: CompanionType };
+type Palette = { steel: string; navy: string; cream: string; peach: string };
+type FontKey = 'lucida-handwriting' | 'segoe-script' | 'lucida-calligraphy';
 
-type Companion = {
-  name: string;
-  type: CompanionType;
-};
+// ─── Constants ────────────────────────────────────────────────────────────────
+const INTRO_VIDEO_PATH = '/intro/intro.mp4';
+const SOUNDTRACK_PATH = '/intro/soundtrack.mp3';
+const MUTE_AFTER_MS = 60_000;
 
-type Palette = {
-  steel: string;
-  navy: string;
-  cream: string;
-  peach: string;
-};
-
-const defaultPalette: Palette = {
+const DEFAULT_PALETTE: Palette = {
   steel: '#6e88a0',
   navy: '#2b4257',
   cream: '#f9dcca',
   peach: '#ecc4a8'
 };
 
-const INTRO_VIDEO_PATH = '/intro/intro.mp4';
-const SOUNDTRACK_PATH = '/intro/soundtrack.mp3';
-
-const eventInfo = {
-  couple: 'Salvatore e Donatella',
-  dateLabel: 'Mercoledi 30 Settembre 2026',
-  church: {
-    name: 'Chiesa',
-    address: 'Piazza Santa Chiara 4, Napoli',
-    time: '15:30'
-  },
-  restaurant: {
-    name: 'Hotel San Francesco al Monte',
-    address: 'Corso Vittorio Emanuele 328, Napoli',
-    time: '17:00'
-  }
-};
-
-const faqItems = [
-  {
-    question: 'Entro quando confermare la presenza?',
-    answer: 'Ti chiediamo di compilare il modulo RSVP entro il 20 agosto 2026.'
-  },
-  {
-    question: 'Posso aggiungere familiari o bambini?',
-    answer: 'Si. Nel modulo RSVP puoi aggiungere tutte le persone che verranno con te.'
-  },
-  {
-    question: 'Dove trovo le indicazioni stradali?',
-    answer: 'Sotto alla sezione mappe trovi la mappa della chiesa e quella del ristorante.'
-  }
+const FONTS: { id: FontKey; label: string; css: string }[] = [
+  { id: 'lucida-handwriting', label: 'Lucida Handwriting', css: '"Lucida Handwriting", cursive' },
+  { id: 'segoe-script',       label: 'Segoe Script',       css: '"Segoe Script", cursive' },
+  { id: 'lucida-calligraphy', label: 'Lucida Calligraphy', css: '"Lucida Calligraphy", cursive' },
 ];
 
-function mapEmbedUrl(address: string) {
-  return `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
+// ─── Wedding content ──────────────────────────────────────────────────────────
+const CONTENT = {
+  coupleNames: 'Salvatore & Donatella',
+  shortDate: '30.09.2026',
+  heroSubtitle:
+    'Mercoledì 30 Settembre 2026 scriveremo un nuovo capitolo della nostra storia d\'amore e saremmo onorati di avervi al nostro fianco.\nAbbiamo creato questa pagina per guidarvi tra i luoghi e i momenti del nostro "Sì".\nConsultate le informazioni e fateci sapere se sarete dei nostri.',
+  ceremony: {
+    name: 'Chiesa di Santa Lucia Vergine al Monte',
+    time: '11.15',
+    address: 'Corso Vittorio Emanuele, 328, 80135 Napoli NA',
+    mapsQuery: 'Chiesa di Santa Lucia Vergine al Monte, Corso Vittorio Emanuele 328, Napoli',
+  },
+  reception: {
+    name: 'Hotel San Francesco al Monte',
+    description:
+      "Dopo la celebrazione, il ricevimento si terrà a pochi passi dalla Chiesa, presso l'Hotel San Francesco al Monte, un antico monastero affacciato sul Golfo.",
+    address: 'Corso Vittorio Emanuele, 328, 80135 Napoli NA',
+    parkingNote:
+      'Data la bellezza e la particolarità del Corso Vittorio Emanuele, vi consigliamo di arrivare con un leggero anticipo per godervi il panorama e facilitare il parcheggio.',
+    mapsQuery: 'Hotel San Francesco al Monte, Corso Vittorio Emanuele 328, Napoli',
+  },
+  rsvpDeadline: '1 agosto 2026',
+  faq: [
+    {
+      q: 'Entro quando confermare la presenza?',
+      a: 'Ti chiediamo di compilare il modulo RSVP entro il 1 agosto 2026.',
+    },
+    {
+      q: 'Posso aggiungere familiari o bambini?',
+      a: 'Sì. Nel modulo RSVP puoi aggiungere tutte le persone che verranno con te.',
+    },
+    {
+      q: 'Dove trovo le indicazioni stradali?',
+      a: "Nella sezione Mappe trovi la posizione della Chiesa e dell'Hotel.",
+    },
+  ],
+} as const;
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function mapEmbedUrl(q: string) {
+  return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const normalized = hex.replace('#', '');
-  const full = normalized.length === 3 ? normalized.split('').map((c) => c + c).join('') : normalized;
-  const value = Number.parseInt(full, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+function hex(hex: string, a: number) {
+  const n = hex.replace('#', '');
+  const full = n.length === 3 ? n.split('').map((c) => c + c).join('') : n;
+  const v = parseInt(full, 16);
+  return `rgba(${(v >> 16) & 255}, ${(v >> 8) & 255}, ${v & 255}, ${a})`;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
   const soundtrackRef = useRef<HTMLAudioElement | null>(null);
+  const muteTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [introState, setIntroState] = useState<'ready' | 'playing' | 'done'>('ready');
-  const [introError, setIntroError] = useState(false);
-  const [palette, setPalette] = useState<Palette>(defaultPalette);
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  // 'idle' → SSR guard; 'ready' → tap button; 'playing' → video runs;
+  // 'entering' → names animation; 'done' → full site visible
+  const [phase, setPhase]           = useState<'idle' | 'ready' | 'playing' | 'entering' | 'done'>('idle');
+  const [introError, setIntroError]  = useState(false);
+  const [audioStarted, setAudioStarted] = useState(false);
+  const [isMuted, setIsMuted]        = useState(false);
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [companions, setCompanions] = useState<Companion[]>([]);
-  const [isSending, setIsSending] = useState(false);
+  // Settings panel
+  const [palette, setPalette]        = useState<Palette>(DEFAULT_PALETTE);
+  const [font, setFont]              = useState<FontKey>('lucida-handwriting');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // RSVP form
+  const [firstName, setFirstName]    = useState('');
+  const [lastName, setLastName]      = useState('');
+  const [allergies, setAllergies]    = useState('');
+  const [companions, setCompanions]  = useState<Companion[]>([]);
+  const [isSending, setIsSending]    = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
 
-  const totalGuests = useMemo(() => 1 + companions.filter((item) => item.name.trim().length > 0).length, [companions]);
+  const totalGuests = useMemo(
+    () => 1 + companions.filter((c) => c.name.trim().length > 0).length,
+    [companions],
+  );
 
-  const pageVars = {
-    '--color-steel': palette.steel,
-    '--color-navy': palette.navy,
-    '--color-cream': palette.cream,
-    '--color-peach': palette.peach
-  } as CSSProperties;
+  // Client-side mount
+  useEffect(() => { setPhase('ready'); }, []);
 
-  const blockStyle = {
-    borderColor: hexToRgba(palette.navy, 0.22),
-    backgroundColor: hexToRgba(palette.cream, 0.93),
-    boxShadow: `0 16px 40px ${hexToRgba(palette.navy, 0.16)}`
-  } as CSSProperties;
+  // Names animation timer: entering → done after 5 s
+  useEffect(() => {
+    if (phase !== 'entering') return;
+    const t = setTimeout(() => setPhase('done'), 5000);
+    return () => clearTimeout(t);
+  }, [phase]);
 
-  const cardStyle = {
-    borderColor: hexToRgba(palette.navy, 0.2),
-    backgroundColor: hexToRgba('#ffffff', 0.8)
-  } as CSSProperties;
-
-  const inputStyle = {
-    borderColor: hexToRgba(palette.navy, 0.35),
-    color: palette.navy,
-    backgroundColor: hexToRgba('#ffffff', 0.86)
-  } as CSSProperties;
-
-  const handlePaletteChange = (key: keyof Palette, value: string) => {
-    setPalette((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const addCompanion = () => {
-    setCompanions((prev) => [...prev, { name: '', type: 'Parente' }]);
-  };
-
-  const updateCompanion = (index: number, patch: Partial<Companion>) => {
-    setCompanions((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-  };
-
-  const removeCompanion = (index: number) => {
-    setCompanions((prev) => prev.filter((_, i) => i !== index));
-  };
+  // Auto-mute soundtrack after 60 s
+  useEffect(() => {
+    if (!audioStarted) return;
+    muteTimerRef.current = setTimeout(() => {
+      const a = soundtrackRef.current;
+      if (a && !a.muted) { a.muted = true; setIsMuted(true); }
+    }, MUTE_AFTER_MS);
+    return () => { if (muteTimerRef.current) clearTimeout(muteTimerRef.current); };
+  }, [audioStarted]);
 
   const startIntro = async () => {
+    setAudioStarted(true);
     const soundtrack = soundtrackRef.current;
-    const introVideo = introVideoRef.current;
+    if (soundtrack) { soundtrack.volume = 0.55; void soundtrack.play().catch(() => {}); }
 
-    if (soundtrack) {
-      soundtrack.volume = 0.5;
-      void soundtrack.play().catch(() => {
-        // If blocked, user can still continue.
-      });
-    }
-
-    if (!introVideo) {
-      setIntroState('done');
-      return;
-    }
-
+    const video = introVideoRef.current;
+    if (!video) { setPhase('entering'); return; }
     try {
-      introVideo.muted = true;
-      introVideo.currentTime = 0;
-      await introVideo.play();
-      setIntroState('playing');
+      video.muted = true;
+      video.currentTime = 0;
+      await video.play();
+      setPhase('playing');
     } catch {
       setIntroError(true);
-      setIntroState('done');
+      setPhase('entering');
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const toggleMute = () => {
+    const a = soundtrackRef.current;
+    if (!a) return;
+    if (muteTimerRef.current) { clearTimeout(muteTimerRef.current); muteTimerRef.current = null; }
+    a.muted = !a.muted;
+    setIsMuted(a.muted);
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setSubmitMessage('');
-
-    const cleanCompanions = companions
-      .map((item) => ({ ...item, name: item.name.trim() }))
-      .filter((item) => item.name.length > 0);
-
-    if (!firstName.trim() || !lastName.trim()) {
-      setSubmitMessage('Inserisci nome e cognome per continuare.');
-      return;
-    }
-
+    const clean = companions.map((c) => ({ ...c, name: c.name.trim() })).filter((c) => c.name.length > 0);
+    if (!firstName.trim() || !lastName.trim()) { setSubmitMessage('Inserisci nome e cognome per continuare.'); return; }
     setIsSending(true);
-
     try {
-      const response = await fetch('/api/rsvp', {
+      const res = await fetch('/api/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          allergies: allergies.trim(),
-          companions: cleanCompanions
-        })
+        body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), allergies: allergies.trim(), companions: clean }),
       });
-
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
-
-      if (!response.ok || !payload.ok) {
-        setSubmitMessage(payload.message || 'Si e verificato un problema durante il salvataggio.');
-        return;
-      }
-
+      const payload = (await res.json()) as { ok?: boolean; message?: string };
+      if (!res.ok || !payload.ok) { setSubmitMessage(payload.message || 'Si è verificato un problema.'); return; }
       setSubmitMessage('Conferma registrata correttamente. Grazie.');
-      setFirstName('');
-      setLastName('');
-      setAllergies('');
-      setCompanions([]);
+      setFirstName(''); setLastName(''); setAllergies(''); setCompanions([]);
     } catch {
       setSubmitMessage('Connessione non disponibile. Riprova tra qualche minuto.');
     } finally {
@@ -201,292 +177,510 @@ export default function HomePage() {
     }
   };
 
+  if (phase === 'idle') return null;
+
+  const headingCss = FONTS.find((f) => f.id === font)?.css ?? FONTS[0].css;
+  const blockStyle: CSSProperties = {
+    borderColor: hex(palette.navy, 0.22),
+    backgroundColor: hex(palette.cream, 0.93),
+    boxShadow: `0 16px 40px ${hex(palette.navy, 0.16)}`,
+  };
+  const cardStyle: CSSProperties  = { borderColor: hex(palette.navy, 0.2), backgroundColor: hex('#ffffff', 0.8) };
+  const inputStyle: CSSProperties = { borderColor: hex(palette.navy, 0.35), color: palette.navy, backgroundColor: hex('#ffffff', 0.86) };
+
   return (
-    <main className="relative min-h-screen overflow-x-hidden" style={pageVars}>
+    <main className="relative min-h-screen overflow-x-hidden">
       <audio ref={soundtrackRef} preload="auto" loop>
         <source src={SOUNDTRACK_PATH} type="audio/mpeg" />
       </audio>
 
-      {introState !== 'done' && (
-        <div className="fixed inset-0 z-[120] bg-black">
-          <video
-            ref={introVideoRef}
-            className="h-full w-full object-contain"
-            playsInline
-            preload="auto"
-            muted
-            onEnded={() => setIntroState('done')}
-            onError={() => setIntroError(true)}
+      {/* ── Intro video overlay ───────────────────────────────────────────── */}
+      <AnimatePresence>
+        {(phase === 'ready' || phase === 'playing') && (
+          <motion.div
+            key="intro"
+            className="fixed inset-0 z-[120] bg-black"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
           >
-            <source src={INTRO_VIDEO_PATH} type="video/mp4" />
+            {!introError ? (
+              <>
+                <video
+                  ref={introVideoRef}
+                  className="h-full w-full object-contain"
+                  playsInline
+                  preload="auto"
+                  muted
+                  onEnded={() => setPhase('entering')}
+                  onError={() => { setIntroError(true); setPhase('entering'); }}
+                >
+                  <source src={INTRO_VIDEO_PATH} type="video/mp4" />
+                </video>
+                {phase === 'ready' && (
+                  <button
+                    type="button"
+                    onClick={() => void startIntro()}
+                    className="absolute inset-0 grid place-items-center bg-black/25"
+                    aria-label="Apri invito"
+                  >
+                    <span className="rounded-full border border-white/70 bg-black/60 px-6 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white">
+                      Tap per aprire
+                    </span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="absolute inset-0 grid place-items-center px-4">
+                <button
+                  type="button"
+                  onClick={() => void startIntro()}
+                  className="rounded-xl border border-white/45 bg-black/40 px-5 py-3 text-sm text-white"
+                >
+                  Continua al sito
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Background video (entering + done) ──────────────────────────── */}
+      {(phase === 'entering' || phase === 'done') && (
+        <>
+          <video
+            className="fixed inset-0 h-full w-full object-cover"
+            autoPlay muted loop playsInline
+          >
+            <source src="/background.mp4" type="video/mp4" />
           </video>
-
-          {introState === 'ready' && !introError && (
-            <button
-              type="button"
-              onClick={() => void startIntro()}
-              className="absolute inset-0 grid place-items-center bg-black/25"
-              aria-label="Apri invito"
-            >
-              <span className="rounded-full border border-white/70 bg-black/60 px-6 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white">
-                Tap per aprire
-              </span>
-            </button>
-          )}
-
-          {introError && (
-            <div className="absolute inset-0 grid place-items-center px-4">
-              <button
-                type="button"
-                onClick={() => setIntroState('done')}
-                className="rounded-xl border border-white/45 bg-black/40 px-5 py-3 text-sm text-white"
-              >
-                Continua al sito
-              </button>
-            </div>
-          )}
-        </div>
+          <div
+            className="fixed inset-0"
+            style={{
+              background: `linear-gradient(180deg, ${hex(palette.navy, 0.66)} 0%, ${hex(palette.navy, 0.46)} 40%, ${hex(palette.navy, 0.58)} 100%)`,
+            }}
+          />
+        </>
       )}
 
-      <video
-        className="fixed inset-0 h-full w-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        poster="/media/background-poster.jpg"
-      >
-        <source src="/background.mp4" type="video/mp4" />
-      </video>
-
-      <div
-        className="fixed inset-0"
-        style={{
-          background: `linear-gradient(180deg, ${hexToRgba(palette.navy, 0.66)} 0%, ${hexToRgba(palette.navy, 0.46)} 40%, ${hexToRgba(palette.navy, 0.58)} 100%)`
-        }}
-      />
-
-      <button
-        type="button"
-        className="fixed right-3 top-3 z-[90] rounded-xl border px-4 py-2 text-sm font-semibold backdrop-blur"
-        style={{ borderColor: hexToRgba(palette.navy, 0.35), backgroundColor: hexToRgba(palette.cream, 0.92), color: palette.navy }}
-        onClick={() => setIsPaletteOpen((prev) => !prev)}
-      >
-        {isPaletteOpen ? 'Chiudi palette' : 'Apri palette'}
-      </button>
-
-      {isPaletteOpen && (
-        <aside className="fixed right-3 top-16 z-[80] w-[300px] rounded-2xl border p-4 backdrop-blur" style={blockStyle}>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: palette.steel }}>
-            Palette Sito
-          </p>
-          <div className="mt-3 space-y-2">
-            <label className="grid grid-cols-[auto_44px_1fr] items-center gap-3 text-sm font-semibold" style={{ color: palette.navy }}>
-              <span>Steel</span>
-              <input type="color" value={palette.steel} onChange={(e) => handlePaletteChange('steel', e.target.value)} />
-              <input className="rounded-md border px-2 py-1 text-xs font-mono" style={inputStyle} value={palette.steel} readOnly />
-            </label>
-            <label className="grid grid-cols-[auto_44px_1fr] items-center gap-3 text-sm font-semibold" style={{ color: palette.navy }}>
-              <span>Navy</span>
-              <input type="color" value={palette.navy} onChange={(e) => handlePaletteChange('navy', e.target.value)} />
-              <input className="rounded-md border px-2 py-1 text-xs font-mono" style={inputStyle} value={palette.navy} readOnly />
-            </label>
-            <label className="grid grid-cols-[auto_44px_1fr] items-center gap-3 text-sm font-semibold" style={{ color: palette.navy }}>
-              <span>Cream</span>
-              <input type="color" value={palette.cream} onChange={(e) => handlePaletteChange('cream', e.target.value)} />
-              <input className="rounded-md border px-2 py-1 text-xs font-mono" style={inputStyle} value={palette.cream} readOnly />
-            </label>
-            <label className="grid grid-cols-[auto_44px_1fr] items-center gap-3 text-sm font-semibold" style={{ color: palette.navy }}>
-              <span>Peach</span>
-              <input type="color" value={palette.peach} onChange={(e) => handlePaletteChange('peach', e.target.value)} />
-              <input className="rounded-md border px-2 py-1 text-xs font-mono" style={inputStyle} value={palette.peach} readOnly />
-            </label>
-          </div>
-          <button
-            type="button"
-            className="mt-3 w-full rounded-xl border px-3 py-2 text-sm font-semibold"
-            style={{ borderColor: hexToRgba(palette.navy, 0.35), color: palette.navy }}
-            onClick={() => setPalette(defaultPalette)}
+      {/* ── Names animation overlay (entering) ──────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'entering' && (
+          <motion.div
+            key="names-overlay"
+            className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/55 px-6"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.8, ease: 'easeInOut' }}
           >
-            Ripristina palette
-          </button>
+            <motion.div
+              className="mb-6 h-px w-24 bg-white/40"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 1.2 }}
+            />
+            <motion.h1
+              className="text-center text-5xl leading-tight tracking-wide text-white drop-shadow-lg md:text-7xl"
+              style={{ fontFamily: headingCss }}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 1.6, ease: 'easeOut' }}
+            >
+              {CONTENT.coupleNames}
+            </motion.h1>
+            <motion.p
+              className="mt-5 text-center text-xl tracking-[0.25em] text-white/75 md:text-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.4, duration: 1.4, ease: 'easeOut' }}
+            >
+              {CONTENT.shortDate}
+            </motion.p>
+            <motion.div
+              className="mt-6 h-px w-24 bg-white/40"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ delay: 2.2, duration: 1.2 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mute toggle (visible after audio started) ────────────────────── */}
+      {audioStarted && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label={isMuted ? 'Attiva audio' : 'Silenzia audio'}
+          className="fixed left-4 top-4 z-[70] flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/50"
+        >
+          {isMuted ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {/* ── Settings button ──────────────────────────────────────────────── */}
+      {phase === 'done' && (
+        <button
+          type="button"
+          className="fixed right-3 top-3 z-[90] rounded-xl border px-4 py-2 text-sm font-semibold backdrop-blur-sm transition"
+          style={{ borderColor: hex(palette.navy, 0.35), backgroundColor: hex(palette.cream, 0.92), color: palette.navy }}
+          onClick={() => setIsSettingsOpen((p) => !p)}
+        >
+          {isSettingsOpen ? 'Chiudi' : '⚙ Impostazioni'}
+        </button>
+      )}
+
+      {/* ── Settings panel (palette + font picker) ───────────────────────── */}
+      {isSettingsOpen && phase === 'done' && (
+        <aside
+          className="fixed right-3 top-14 z-[80] w-[300px] overflow-y-auto rounded-2xl border p-4 backdrop-blur-sm"
+          style={blockStyle}
+        >
+          {/* Palette */}
+          <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: palette.steel }}>
+            Palette
+          </p>
+          <div className="mt-2 space-y-2">
+            {(['steel', 'navy', 'cream', 'peach'] as const).map((k) => (
+              <label key={k} className="grid grid-cols-[50px_44px_1fr] items-center gap-2 text-sm font-semibold" style={{ color: palette.navy }}>
+                <span className="capitalize">{k}</span>
+                <input type="color" value={palette[k]} onChange={(e) => setPalette((p) => ({ ...p, [k]: e.target.value }))} className="h-8 w-full cursor-pointer rounded border-0 p-0" />
+                <input className="rounded-md border px-2 py-1 text-xs font-mono" style={inputStyle} value={palette[k]} readOnly />
+              </label>
+            ))}
+            <button
+              type="button"
+              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm font-semibold transition"
+              style={{ borderColor: hex(palette.navy, 0.35), color: palette.navy }}
+              onClick={() => setPalette(DEFAULT_PALETTE)}
+            >
+              Ripristina palette
+            </button>
+          </div>
+
+          {/* Font picklist */}
+          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: palette.steel }}>
+            Font titoli
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {FONTS.map(({ id, label, css }) => {
+              const active = font === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFont(id)}
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-center transition-all"
+                  style={{
+                    borderColor: active ? palette.navy : hex(palette.navy, 0.15),
+                    backgroundColor: active ? palette.navy : hex('#ffffff', 0.7),
+                    color: active ? palette.cream : palette.navy,
+                  }}
+                >
+                  <span style={{ fontFamily: css }} className="block text-2xl leading-none">Aa</span>
+                  <span className="mt-1 block text-[9px] leading-tight opacity-80">{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </aside>
       )}
 
-      <div className="relative z-10 px-4 pb-8 pt-24 md:py-10">
-        <header className="mx-auto w-full max-w-4xl rounded-2xl border p-5 text-center md:p-8" style={blockStyle}>
-          <p className="text-sm uppercase tracking-[0.22em]" style={{ color: palette.steel }}>
-            Invito al Matrimonio
-          </p>
-          <h1 className="mt-3 text-4xl leading-tight md:text-6xl" style={{ color: palette.navy }}>
-            {eventInfo.couple}
-          </h1>
-          <p className="mt-4 text-xl md:text-2xl" style={{ color: palette.navy }}>
-            {eventInfo.dateLabel}
-          </p>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed" style={{ color: hexToRgba(palette.navy, 0.87) }}>
-            Benvenuti. In questa pagina trovate tutte le informazioni essenziali: orari, luoghi, mappe e conferma presenza.
-          </p>
-        </header>
-
-        <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
-          <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy }}>
-            Informazioni della giornata
-          </h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <article className="rounded-xl border p-4" style={cardStyle}>
-              <p className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.steel }}>
-                Chiesa
-              </p>
-              <p className="mt-2 text-2xl" style={{ color: palette.navy }}>
-                {eventInfo.church.name}
-              </p>
-              <p className="mt-1 text-lg" style={{ color: palette.navy }}>
-                {eventInfo.church.address}
-              </p>
-              <p className="mt-1 text-lg" style={{ color: palette.navy }}>
-                Orario: {eventInfo.church.time}
-              </p>
-            </article>
-            <article className="rounded-xl border p-4" style={cardStyle}>
-              <p className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.steel }}>
-                Ristorante
-              </p>
-              <p className="mt-2 text-2xl" style={{ color: palette.navy }}>
-                {eventInfo.restaurant.name}
-              </p>
-              <p className="mt-1 text-lg" style={{ color: palette.navy }}>
-                {eventInfo.restaurant.address}
-              </p>
-              <p className="mt-1 text-lg" style={{ color: palette.navy }}>
-                Orario: {eventInfo.restaurant.time}
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
-          <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy }}>
-            Conferma presenza (RSVP)
-          </h2>
-          <p className="mt-2 text-lg" style={{ color: hexToRgba(palette.navy, 0.86) }}>
-            Compila il modulo. Se vieni con familiari o bambini, aggiungili qui sotto.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-base font-semibold" htmlFor="firstName" style={{ color: palette.navy }}>
-                  Nome
-                </label>
-                <input id="firstName" className="w-full rounded-xl border px-4 py-3 text-base" style={inputStyle} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-              </div>
-              <div>
-                <label className="mb-1 block text-base font-semibold" htmlFor="lastName" style={{ color: palette.navy }}>
-                  Cognome
-                </label>
-                <input id="lastName" className="w-full rounded-xl border px-4 py-3 text-base" style={inputStyle} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-              </div>
+      {/* ── Main content (fades in when phase = done) ────────────────────── */}
+      {(phase === 'entering' || phase === 'done') && (
+        <motion.div
+          className="relative z-10 px-4 pb-8 pt-24 md:py-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === 'done' ? 1 : 0 }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+        >
+          {/* Header / invito */}
+          <header className="mx-auto w-full max-w-4xl rounded-2xl border p-5 text-center md:p-8" style={blockStyle}>
+            <h1
+              className="text-4xl leading-tight md:text-6xl"
+              style={{ color: palette.navy, fontFamily: headingCss }}
+            >
+              {CONTENT.coupleNames}
+            </h1>
+            <p className="mt-2 text-sm uppercase tracking-[0.35em]" style={{ color: palette.steel }}>
+              {CONTENT.shortDate}
+            </p>
+            <p
+              className="mx-auto mt-5 max-w-2xl whitespace-pre-line text-lg leading-relaxed"
+              style={{ color: hex(palette.navy, 0.87) }}
+            >
+              {CONTENT.heroSubtitle}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a
+                href="#rsvp"
+                className="rounded-xl px-5 py-3 text-sm font-semibold text-white transition"
+                style={{ backgroundColor: palette.navy }}
+              >
+                RSVP
+              </a>
+              <a
+                href="#programma"
+                className="rounded-xl border px-5 py-3 text-sm font-semibold transition"
+                style={{ borderColor: hex(palette.navy, 0.35), color: palette.navy, backgroundColor: hex(palette.cream, 0.8) }}
+              >
+                Il Programma
+              </a>
             </div>
+          </header>
 
-            <div>
-              <label className="mb-1 block text-base font-semibold" htmlFor="allergies" style={{ color: palette.navy }}>
-                Intolleranze o allergie
-              </label>
-              <textarea id="allergies" className="min-h-24 w-full rounded-xl border px-4 py-3 text-base" style={inputStyle} value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="Scrivi eventuali intolleranze alimentari. Se non presenti, inserisci: Nessuna" />
-            </div>
+          {/* Il Programma della Giornata */}
+          <section id="programma" className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
+            <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+              Il Programma della Giornata
+            </h2>
 
-            <div className="rounded-xl border p-4" style={cardStyle}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-2xl" style={{ color: palette.navy }}>
-                  Accompagnatori (+1, familiari, bambini)
-                </h3>
-                <button type="button" onClick={addCompanion} className="rounded-xl px-4 py-2 text-base text-white" style={{ backgroundColor: palette.navy }}>
-                  Aggiungi persona
-                </button>
-              </div>
-
-              {companions.length === 0 ? (
-                <p className="mt-3 text-base" style={{ color: hexToRgba(palette.navy, 0.82) }}>
-                  Nessun accompagnatore inserito.
+            <div className="mt-5 space-y-5">
+              {/* Cerimonia */}
+              <article className="rounded-xl border p-5" style={cardStyle}>
+                <p className="text-xs uppercase tracking-[0.25em]" style={{ color: palette.steel }}>
+                  La Cerimonia
                 </p>
-              ) : (
-                <div className="mt-3 space-y-3">
-                  {companions.map((item, index) => (
-                    <div key={`${index}-${item.type}`} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_180px_auto]" style={cardStyle}>
-                      <input className="w-full rounded-xl border px-4 py-3 text-base" style={inputStyle} placeholder="Nome e cognome accompagnatore" value={item.name} onChange={(e) => updateCompanion(index, { name: e.target.value })} />
-                      <select className="w-full rounded-xl border px-4 py-3 text-base" style={inputStyle} value={item.type} onChange={(e) => updateCompanion(index, { type: e.target.value as CompanionType })}>
-                        <option value="Parente">Parente</option>
-                        <option value="Bambino">Bambino</option>
-                      </select>
-                      <button type="button" className="rounded-xl border px-4 py-2 text-base" style={{ borderColor: hexToRgba(palette.navy, 0.35), color: palette.navy }} onClick={() => removeCompanion(index)}>
-                        Rimuovi
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                <p className="mt-2 text-2xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+                  {CONTENT.ceremony.name}
+                </p>
+                <p className="mt-2 text-sm font-medium" style={{ color: palette.navy }}>
+                  Orario: {CONTENT.ceremony.time}
+                </p>
+                <p className="text-sm" style={{ color: hex(palette.navy, 0.7) }}>
+                  Location: {CONTENT.ceremony.address}
+                </p>
+              </article>
 
-            <p className="text-base font-semibold" style={{ color: palette.navy }}>
-              Totale persone confermate: {totalGuests}
+              <div className="h-px w-full" style={{ backgroundColor: hex(palette.navy, 0.1) }} />
+
+              {/* Ricevimento */}
+              <article className="rounded-xl border p-5" style={cardStyle}>
+                <p className="text-xs uppercase tracking-[0.25em]" style={{ color: palette.steel }}>
+                  Il Ricevimento
+                </p>
+                <p className="mt-2 text-2xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+                  {CONTENT.reception.name}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: hex(palette.navy, 0.8) }}>
+                  {CONTENT.reception.description}
+                </p>
+                <p className="mt-2 text-sm" style={{ color: hex(palette.navy, 0.7) }}>
+                  Location: {CONTENT.reception.address}
+                </p>
+                <p className="mt-3 text-sm italic" style={{ color: hex(palette.navy, 0.62) }}>
+                  {CONTENT.reception.parkingNote}
+                </p>
+              </article>
+            </div>
+          </section>
+
+          {/* RSVP */}
+          <section id="rsvp" className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
+            <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+              Conferma Presenza
+            </h2>
+            <p className="mt-2 text-sm font-semibold" style={{ color: palette.navy }}>
+              Entro quando confermare la presenza?
+            </p>
+            <p className="text-sm" style={{ color: hex(palette.navy, 0.72) }}>
+              Ti chiediamo di compilare il modulo RSVP entro il {CONTENT.rsvpDeadline}.
             </p>
 
-            <button type="submit" disabled={isSending} className="rounded-xl px-6 py-3 text-lg font-semibold text-white disabled:cursor-not-allowed" style={{ backgroundColor: palette.steel, opacity: isSending ? 0.7 : 1 }}>
-              {isSending ? 'Salvataggio in corso...' : 'Invia conferma RSVP'}
-            </button>
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-base font-semibold" htmlFor="firstName" style={{ color: palette.navy }}>
+                    Nome
+                  </label>
+                  <input
+                    id="firstName"
+                    className="w-full rounded-xl border px-4 py-3 text-base"
+                    style={inputStyle}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-base font-semibold" htmlFor="lastName" style={{ color: palette.navy }}>
+                    Cognome
+                  </label>
+                  <input
+                    id="lastName"
+                    className="w-full rounded-xl border px-4 py-3 text-base"
+                    style={inputStyle}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-            {submitMessage ? (
+              <div>
+                <label className="mb-1 block text-base font-semibold" htmlFor="allergies" style={{ color: palette.navy }}>
+                  Intolleranze o allergie
+                </label>
+                <textarea
+                  id="allergies"
+                  className="min-h-24 w-full rounded-xl border px-4 py-3 text-base"
+                  style={inputStyle}
+                  value={allergies}
+                  onChange={(e) => setAllergies(e.target.value)}
+                  placeholder="Eventuali intolleranze alimentari. Se nessuna: Nessuna"
+                />
+              </div>
+
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-2xl" style={{ color: palette.navy }}>
+                    Accompagnatori
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setCompanions((p) => [...p, { name: '', type: 'Parente' }])}
+                    className="rounded-xl px-4 py-2 text-base text-white transition"
+                    style={{ backgroundColor: palette.navy }}
+                  >
+                    Aggiungi persona
+                  </button>
+                </div>
+                {companions.length === 0 ? (
+                  <p className="mt-3 text-base" style={{ color: hex(palette.navy, 0.75) }}>
+                    Nessun accompagnatore inserito.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {companions.map((item, i) => (
+                      <div key={`${i}-${item.type}`} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_180px_auto]" style={cardStyle}>
+                        <input
+                          className="w-full rounded-xl border px-4 py-3 text-base"
+                          style={inputStyle}
+                          placeholder="Nome e cognome"
+                          value={item.name}
+                          onChange={(e) => setCompanions((p) => p.map((c, idx) => (idx === i ? { ...c, name: e.target.value } : c)))}
+                        />
+                        <select
+                          className="w-full rounded-xl border px-4 py-3 text-base"
+                          style={inputStyle}
+                          value={item.type}
+                          onChange={(e) => setCompanions((p) => p.map((c, idx) => (idx === i ? { ...c, type: e.target.value as CompanionType } : c)))}
+                        >
+                          <option value="Parente">Parente</option>
+                          <option value="Bambino">Bambino</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="rounded-xl border px-4 py-2 text-base transition"
+                          style={{ borderColor: hex(palette.navy, 0.35), color: palette.navy }}
+                          onClick={() => setCompanions((p) => p.filter((_, idx) => idx !== i))}
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <p className="text-base font-semibold" style={{ color: palette.navy }}>
-                {submitMessage}
+                Totale persone confermate: {totalGuests}
               </p>
-            ) : null}
-          </form>
-        </section>
 
-        <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
-          <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy }}>
-            Mappe
-          </h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>
-                Mappa Chiesa
-              </p>
-              <iframe title="Mappa Chiesa" src={mapEmbedUrl(eventInfo.church.address)} className="h-[320px] w-full rounded-xl border" style={{ borderColor: hexToRgba(palette.navy, 0.2) }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-            </div>
-            <div>
-              <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>
-                Mappa Ristorante
-              </p>
-              <iframe title="Mappa Ristorante" src={mapEmbedUrl(eventInfo.restaurant.address)} className="h-[320px] w-full rounded-xl border" style={{ borderColor: hexToRgba(palette.navy, 0.2) }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-            </div>
-          </div>
-        </section>
+              <button
+                type="submit"
+                disabled={isSending}
+                className="rounded-xl px-6 py-3 text-lg font-semibold text-white transition disabled:cursor-not-allowed"
+                style={{ backgroundColor: palette.steel, opacity: isSending ? 0.7 : 1 }}
+              >
+                {isSending ? 'Salvataggio in corso…' : 'Invia conferma RSVP'}
+              </button>
 
-        <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
-          <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy }}>
-            Domande frequenti
-          </h2>
-          <div className="mt-4 space-y-3">
-            {faqItems.map((item) => (
-              <details key={item.question} className="rounded-xl border p-4" style={cardStyle}>
-                <summary className="cursor-pointer text-lg font-semibold" style={{ color: palette.navy }}>
-                  {item.question}
-                </summary>
-                <p className="mt-2 text-lg" style={{ color: hexToRgba(palette.navy, 0.88) }}>
-                  {item.answer}
+              {submitMessage && (
+                <p className="text-base font-semibold" style={{ color: palette.navy }}>
+                  {submitMessage}
                 </p>
-              </details>
-            ))}
-          </div>
-        </section>
+              )}
+            </form>
+          </section>
 
-        <footer className="relative z-10 mx-auto mt-6 w-full max-w-4xl rounded-2xl border p-5 text-center" style={{ borderColor: hexToRgba(palette.navy, 0.25), backgroundColor: palette.navy, color: palette.cream }}>
-          <p className="text-xl">Con affetto, Salvatore e Donatella</p>
-        </footer>
-      </div>
+          {/* Mappe */}
+          <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
+            <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+              Mappe
+            </h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>
+                  Chiesa
+                </p>
+                <iframe
+                  title="Mappa Chiesa"
+                  src={mapEmbedUrl(CONTENT.ceremony.mapsQuery)}
+                  className="h-[320px] w-full rounded-xl border"
+                  style={{ borderColor: hex(palette.navy, 0.2) }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-lg font-semibold" style={{ color: palette.navy }}>
+                  Hotel
+                </p>
+                <iframe
+                  title="Mappa Hotel"
+                  src={mapEmbedUrl(CONTENT.reception.mapsQuery)}
+                  className="h-[320px] w-full rounded-xl border"
+                  style={{ borderColor: hex(palette.navy, 0.2) }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section className="mx-auto mt-5 w-full max-w-4xl rounded-2xl border p-5 md:p-8" style={blockStyle}>
+            <h2 className="text-3xl md:text-4xl" style={{ color: palette.navy, fontFamily: headingCss }}>
+              Domande frequenti
+            </h2>
+            <div className="mt-4 space-y-3">
+              {CONTENT.faq.map((item) => (
+                <details key={item.q} className="rounded-xl border p-4" style={cardStyle}>
+                  <summary className="cursor-pointer text-lg font-semibold" style={{ color: palette.navy }}>
+                    {item.q}
+                  </summary>
+                  <p className="mt-2 text-lg" style={{ color: hex(palette.navy, 0.88) }}>
+                    {item.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer
+            className="mx-auto mt-6 w-full max-w-4xl rounded-2xl border p-5 text-center"
+            style={{ borderColor: hex(palette.navy, 0.25), backgroundColor: palette.navy, color: palette.cream }}
+          >
+            <p className="text-xl" style={{ fontFamily: headingCss }}>
+              Con amore, Salvatore & Donatella
+            </p>
+          </footer>
+        </motion.div>
+      )}
     </main>
   );
 }

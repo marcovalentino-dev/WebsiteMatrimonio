@@ -17,17 +17,21 @@ const SOUNDTRACK  = '/intro/soundtrack.mp3';
 const MUTE_AFTER  = 60_000;
 const VIEW_IDX: Record<View, number> = { home: 0, rsvp: 1, info: 2 };
 
+// ─── Anteprima video — modifica questi due valori ──────────────────────────
+const VIDEO_PREVIEW_Y_PCT = 30;   // posizione verticale: 0 = alto, 100 = basso
+const VIDEO_PREVIEW_H_PX  = 320;  // altezza cornice in pixel
+
 const DEFAULT_PALETTE: Palette = {
-  steel: '#6e88a0',
-  navy:  '#2b4257',
-  cream: '#f9dcca',
-  peach: '#ecc4a8',
+  steel: '#4A6A82',   /* grigio-blu medio (label, icone) */
+  navy:  '#243847',   /* blu petrolio scuro (primary) */
+  cream: '#F2DDC7',   /* crema calda (secondary-soft, superfici) */
+  peach: '#E7C6A5',   /* pesca caldo (secondary, accenti) */
 };
 
 const FONTS: { id: FontKey; label: string; css: string }[] = [
   { id: 'lucida-handwriting', label: 'Lucida Handwriting', css: '"Lucida Handwriting", cursive' },
   { id: 'segoe-script',       label: 'Segoe Script',       css: '"Segoe Script", cursive' },
-  { id: 'lucida-calligraphy', label: 'Lucida Calligraphy', css: '"Lucida Calligraphy", cursive' },
+  { id: 'lucida-calligraphy', label: 'Lucida Calligraphy', css: '"Lucida Calligraphy", var(--font-pinyon), cursive' },
 ];
 
 // ─── Wedding content ──────────────────────────────────────────────────────────
@@ -310,28 +314,30 @@ export default function HomePage() {
   // ─── HOME VIEW ────────────────────────────────────────────────────────────
   const homeView = () => (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-12 text-center">
-      {/* Names + date */}
+      {/* Names + date — layoutId collega questa posizione all'animazione iniziale */}
       <div className="mb-0">
-        <div className="mx-auto mb-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
-        <h1 className="whitespace-pre-line text-6xl leading-tight md:text-8xl" style={{ fontFamily: hFont, color: palette.cream }}>
+        <motion.div layoutId="wedding-line-top" className="mx-auto mb-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
+        <motion.h1
+          layoutId="wedding-names"
+          className="whitespace-pre-line text-6xl leading-tight md:text-8xl"
+          style={{ fontFamily: hFont, color: palette.cream }}
+        >
           {C.names}
-        </h1>
-        <p className="mt-4 text-2xl" style={{ color: rgba(palette.cream, 0.72) }}>
+        </motion.h1>
+        <motion.p
+          layoutId="wedding-date"
+          className="mt-4 text-2xl"
+          style={{ color: rgba(palette.cream, 0.72) }}
+        >
           {C.shortDate}
-        </p>
-        <div className="mx-auto mt-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
+        </motion.p>
+        <motion.div layoutId="wedding-line-bottom" className="mx-auto mt-5 h-px w-20" style={{ backgroundColor: rgba(palette.cream, 0.45) }} />
       </div>
 
-      {/* Invitation text */}
-      <p className="mx-auto mt-8 max-w-lg text-lg leading-relaxed md:text-xl" style={{ color: rgba(palette.cream, 0.88) }}>
-        <strong>Mercoledì 30 settembre 2026</strong> scriveremo un nuovo capitolo della nostra storia d'amore
-        e saremo onorati di avervi al nostro fianco. Consultate le informazioni e fateci sapere se sarete dei nostri.
-      </p>
-
       {/* ── Video section ──────────────────────────────────────────────── */}
-      <div className="mt-10 w-full max-w-2xl">
+      <div className="mt-8 w-full max-w-3xl">
         <p className="mb-3 text-base tracking-widest uppercase" style={{ color: rgba(palette.cream, 0.6), letterSpacing: '0.18em' }}>
-          il nostro video
+          
         </p>
         {/* Decorative frame */}
         <div
@@ -349,7 +355,8 @@ export default function HomePage() {
         >
           {/* Preview video (muted, looping, no controls) */}
           <video
-            className="w-full h-48 md:h-72 object-cover"
+            className="w-full object-cover"
+            style={{ height: VIDEO_PREVIEW_H_PX, objectPosition: `center ${VIDEO_PREVIEW_Y_PCT}%` }}
             autoPlay
             muted
             loop
@@ -382,6 +389,12 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Invitation text */}
+      <p className="mx-auto mt-8 max-w-lg text-lg leading-relaxed md:text-xl" style={{ color: rgba(palette.cream, 0.88) }}>
+        <strong>Mercoledì 30 settembre 2026</strong> scriveremo un nuovo capitolo della nostra storia d'amore
+        e saremo onorati di avervi al nostro fianco. Consultate le informazioni e fateci sapere se sarete dei nostri.
+      </p>
 
       {/* Summary cards */}
       <div className="mt-10 grid w-full max-w-3xl gap-4 md:grid-cols-3">
@@ -685,44 +698,63 @@ export default function HomePage() {
       {/* ── Names animation ─────────────────────────────────────────────── */}
       <AnimatePresence>
         {phase === 'entering' && (
-          <motion.div
-            key="names"
-            className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/50 px-6"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.8, ease: 'easeInOut' }}
-          >
+          <>
+            {/* Sfondo scuro — fade lento indipendente */}
             <motion.div
-              className="mx-auto mb-5 h-px w-20 bg-white/40"
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 1.2 }}
+              key="names-bg"
+              className="pointer-events-none fixed inset-0 z-[59] bg-black/50"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.8, ease: 'easeInOut' }}
             />
-            <motion.h1
-              className="whitespace-pre-line text-center text-6xl leading-tight text-white drop-shadow-xl md:text-8xl"
-              style={{ fontFamily: hFont }}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 1.5, ease: 'easeOut' }}
-            >
-              {C.names}
-            </motion.h1>
-            <motion.p
-              className="mt-4 text-center text-2xl tracking-[0.2em] text-white/70 md:text-3xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.4, duration: 1.3, ease: 'easeOut' }}
-            >
-              {C.shortDate}
-            </motion.p>
+            {/* Contenuto — esce rapidamente così layoutId può animare verso la home */}
             <motion.div
-              className="mx-auto mt-5 h-px w-20 bg-white/40"
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ delay: 2.2, duration: 1.2 }}
-            />
-          </motion.div>
+              key="names-content"
+              className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center px-6"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: 'easeInOut' }}
+            >
+              <motion.div
+                layoutId="wedding-line-top"
+                className="mx-auto mb-5 h-px w-20"
+                style={{ backgroundColor: rgba(palette.cream, 0.45) }}
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 1.2 }}
+              />
+              <motion.h1
+                layoutId="wedding-names"
+                className="whitespace-pre-line text-center text-6xl leading-tight md:text-8xl"
+                style={{ fontFamily: hFont, color: palette.cream }}
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 1.5, ease: 'easeOut' }}
+              >
+                {C.names}
+              </motion.h1>
+              <motion.p
+                layoutId="wedding-date"
+                className="mt-4 text-center text-2xl tracking-[0.2em] md:text-3xl"
+                style={{ color: rgba(palette.cream, 0.72) }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.4, duration: 1.3, ease: 'easeOut' }}
+              >
+                {C.shortDate}
+              </motion.p>
+              <motion.div
+                layoutId="wedding-line-bottom"
+                className="mx-auto mt-5 h-px w-20"
+                style={{ backgroundColor: rgba(palette.cream, 0.45) }}
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ delay: 2.2, duration: 1.2 }}
+              />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 

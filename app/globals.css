@@ -3,10 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --color-steel: #6e88a0;
-  --color-navy: #2b4257;
-  --color-cream: #f9dcca;
-  --color-peach: #ecc4a8;
+  /* ── Palette derivata dall'immagine di sfondo ── */
+  --color-primary:        #243847;   /* blu petrolio scuro */
+  --color-primary-dark:   #18252F;
+  --color-secondary:      #E7C6A5;   /* pesca caldo */
+  --color-secondary-soft: #F2DDC7;
+  --color-accent:         #FFF6ED;   /* crema luminoso */
+  --color-text-main:      #2B2B2B;
+  --color-text-light:     #F5F5F5;
+  --color-glass:          rgba(255, 255, 255, 0.35);
+  --color-overlay:        rgba(20, 30, 40, 0.45);
+
+  /* Alias mantenuti per compatibilità con il codice esistente */
+  --color-steel: #4A6A82;
+  --color-navy:  #243847;
+  --color-cream: #F2DDC7;
+  --color-peach: #E7C6A5;
 }
 
 * {
@@ -25,8 +37,8 @@ body {
 
 body {
   font-family: var(--font-body), serif;
-  color: var(--color-navy);
-  background: var(--color-cream);
+  color: var(--color-text-main);
+  background: var(--color-secondary-soft);
 }
 
 h1,

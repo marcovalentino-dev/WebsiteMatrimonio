@@ -31,7 +31,7 @@ const DEFAULT_PALETTE: Palette = {
 const FONTS: { id: FontKey; label: string; css: string }[] = [
   { id: 'lucida-handwriting', label: 'Lucida Handwriting', css: '"Lucida Handwriting", cursive' },
   { id: 'segoe-script',       label: 'Segoe Script',       css: '"Segoe Script", cursive' },
-  { id: 'lucida-calligraphy', label: 'Lucida Calligraphy', css: '"Lucida Calligraphy", var(--font-pinyon), cursive' },
+  { id: 'lucida-calligraphy', label: 'Lucida Calligraphy', css: '"Lucida Calligraphy", cursive' },
 ];
 
 // ─── Wedding content ──────────────────────────────────────────────────────────

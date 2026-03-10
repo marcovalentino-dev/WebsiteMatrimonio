@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Lucida Calligraphy';
+  src: url('/fonts/LucidaUnicodeCalligraphy.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lucida Calligraphy';
+  src: url('/fonts/LucidaUnicodeCalligraphyBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ── Palette derivata dall'immagine di sfondo ── */
   --color-primary:        #243847;   /* blu petrolio scuro */
